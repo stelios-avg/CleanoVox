@@ -13,8 +13,9 @@ type Props = NativeStackScreenProps<BookingStackParamList, 'Confirmation'>;
 export default function ConfirmationScreen({ navigation, route }: Props) {
   const { t, language } = useI18n();
   const { isAuthenticated } = useAuth();
-  const { date, dates, timeSlot, option, contact } = route.params;
+  const { date, dates, timeSlot, timeSlots, option, contact } = route.params;
   const visitDates = dates && dates.length > 0 ? dates : [date];
+  const variedTimes = !!timeSlots && new Set(timeSlots).size > 1;
 
   const scale = useRef(new Animated.Value(0.4)).current;
 
@@ -31,14 +32,18 @@ export default function ConfirmationScreen({ navigation, route }: Props) {
     navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
 
   const prettyDate = visitDates
-    .map((iso) =>
-      new Date(`${iso}T12:00:00`).toLocaleDateString(language === 'el' ? 'el-GR' : 'en-GB', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-      })
-    )
-    .join(' · ');
+    .map((iso, index) => {
+      const pretty = new Date(`${iso}T12:00:00`).toLocaleDateString(
+        language === 'el' ? 'el-GR' : 'en-GB',
+        {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+        }
+      );
+      return variedTimes && timeSlots ? `${pretty} · ${timeSlots[index]}` : pretty;
+    })
+    .join(variedTimes ? '\n' : ' · ');
 
   const goHome = () =>
     rootNavigation?.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
@@ -68,7 +73,7 @@ export default function ConfirmationScreen({ navigation, route }: Props) {
         <View style={styles.bookingCard}>
           <Text style={styles.bookingLabel}>{t('confirm.when')}</Text>
           <Text style={styles.bookingLine}>
-            {prettyDate} · {timeSlot}
+            {variedTimes ? prettyDate : `${prettyDate} · ${timeSlot}`}
           </Text>
           <Text style={styles.bookingMeta}>
             {contact.name} · {t(`service.${option}`)} · {contact.address}

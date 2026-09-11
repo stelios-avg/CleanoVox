@@ -73,9 +73,10 @@ export default function BookingSummaryScreen({ navigation, route }: Props) {
   const [extraIds, setExtraIds] = useState<BookingExtraId[]>(
     () => route.params.extras ?? []
   );
-  const { date, dates, timeSlot, category, option, rooms, squareMeters, extraHours, supplies, pieces, plan } =
+  const { date, dates, timeSlot, timeSlots, category, option, rooms, squareMeters, extraHours, supplies, pieces, plan } =
     route.params;
   const visitDates = dates && dates.length > 0 ? dates : [date];
+  const variedTimes = !!timeSlots && new Set(timeSlots).size > 1;
   const cleaningAmount = plan
     ? monthlyPlanPriceCents(plan.frequency, plan.visitHours)
     : bookingTotalCents(option, extraHours, squareMeters, rooms, pieces);
@@ -136,14 +137,15 @@ export default function BookingSummaryScreen({ navigation, route }: Props) {
 
   const extraChoices = extrasForOption(option);
   const prettyDate = visitDates
-    .map((iso) =>
-      new Date(`${iso}T12:00:00`).toLocaleDateString(locale, {
+    .map((iso, index) => {
+      const pretty = new Date(`${iso}T12:00:00`).toLocaleDateString(locale, {
         weekday: 'short',
         day: 'numeric',
         month: 'short',
-      })
-    )
-    .join(' · ');
+      });
+      return variedTimes && timeSlots ? `${pretty} · ${timeSlots[index]}` : pretty;
+    })
+    .join(variedTimes ? '\n' : ' · ');
 
   const rootNavigation =
     navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
@@ -188,7 +190,13 @@ export default function BookingSummaryScreen({ navigation, route }: Props) {
           <SummaryRow
             icon="time-outline"
             label={t('summary.time')}
-            value={extraHours > 0 && !plan ? `${timeSlot} (+${extraHours})` : timeSlot}
+            value={
+              variedTimes
+                ? t('summary.perVisit')
+                : extraHours > 0 && !plan
+                  ? `${timeSlot} (+${extraHours})`
+                  : timeSlot
+            }
           />
           {option === 'Ironing' ? (
             <SummaryRow

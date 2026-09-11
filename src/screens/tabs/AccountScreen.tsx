@@ -120,6 +120,9 @@ export default function AccountScreen({ navigation }: Props) {
             label={t('welcome.loginSignup')}
             onPress={() => navigation.navigate('Auth')}
           />
+          <PressableScale onPress={() => navigation.navigate('Privacy')} hitSlop={8}>
+            <Text style={styles.privacyLink}>{t('privacy.title')}</Text>
+          </PressableScale>
 
           <Text style={styles.sectionLabel}>{t('account.whyJoin')}</Text>
           <View style={styles.highlightList}>
@@ -201,6 +204,21 @@ export default function AccountScreen({ navigation }: Props) {
           <Text style={[styles.menuLabel, { flex: 1 }]}>{t('account.language')}</Text>
           <LanguageToggle />
         </View>
+        <View style={styles.menuDivider} />
+        <MenuRow
+          icon="shield-checkmark-outline"
+          label={t('privacy.title')}
+          sublabel={t('privacy.menuSub')}
+          onPress={() => navigation.navigate('Privacy')}
+        />
+        <View style={styles.menuDivider} />
+        <MenuRow
+          icon="trash-outline"
+          label={t('deleteAccount.title')}
+          sublabel={t('deleteAccount.menuSub')}
+          danger
+          onPress={() => navigation.navigate('DeleteAccount')}
+        />
         <View style={styles.menuDivider} />
         <MenuRow
           icon="log-out-outline"
@@ -401,5 +419,11 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingVertical: 12,
     paddingHorizontal: 14,
+  },
+  privacyLink: {
+    textAlign: 'center',
+    fontSize: 14,
+    fontFamily: fonts.semiBold,
+    color: colors.accent,
   },
 });

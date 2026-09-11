@@ -108,6 +108,11 @@ export type BookingSelection = {
   plan?: PlanBooking;
   /** All visit dates for a monthly plan. `date` stays the first visit. */
   dates?: string[];
+  /**
+   * Per-visit time slots aligned with `dates`. Set when the customer picks
+   * a different time per visit; otherwise every visit uses `timeSlot`.
+   */
+  timeSlots?: string[];
   /** Add-on services chosen on the summary (ironing, hoover, oven, fireplace). */
   extras?: BookingExtraId[];
   /** Set on the summary step: `[]` means continue without supplies. */
@@ -147,6 +152,7 @@ export type BookingStackParamList = {
 export type AuthStackParamList = {
   Login: undefined;
   SignUp: undefined;
+  Privacy: undefined;
 };
 
 export type MainTabParamList = {
@@ -163,6 +169,8 @@ export type RootStackParamList = {
   Auth: NavigatorScreenParams<AuthStackParamList> | undefined;
   MyBookings: undefined;
   Profile: undefined;
+  Privacy: undefined;
+  DeleteAccount: undefined;
   ShopCategory: { category: ShopCategorySlug };
   ShopCart: undefined;
   ShopCheckout: undefined;

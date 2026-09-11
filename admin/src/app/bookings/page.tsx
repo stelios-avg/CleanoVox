@@ -9,6 +9,7 @@ import type { Booking, BookingStatus, ServiceCategory } from '@/lib/types';
 import { BookingRowActions } from './booking-row-actions';
 import { LiveRefresh } from './live-refresh';
 import { BookingMap } from '@/components/booking-map';
+import { isDeletedCustomer } from '@/lib/deleted-customer';
 
 const CATEGORY_LABEL: Record<ServiceCategory, string> = {
   'my-home': 'Σπίτι',
@@ -268,7 +269,9 @@ export default async function BookingsPage({
           </div>
         ) : (
           <ul className="flex flex-col gap-3">
-            {filtered.map((b) => (
+            {filtered.map((b) => {
+              const deleted = isDeletedCustomer(b.contact_name);
+              return (
               <li
                 key={b.id}
                 className="rounded-[24px] bg-white p-5 shadow-[0_10px_30px_rgba(16,22,22,0.05)] ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(16,22,22,0.08)]"
@@ -277,7 +280,11 @@ export default async function BookingsPage({
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusBadge status={b.status} />
-                      {b.user_id ? null : (
+                      {deleted ? (
+                        <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-bold text-zinc-600">
+                          Διαγραμμένος λογαριασμός
+                        </span>
+                      ) : b.user_id ? null : (
                         <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-bold text-zinc-600">
                           Επισκέπτης
                         </span>
@@ -287,8 +294,13 @@ export default async function BookingsPage({
                       </span>
                     </div>
                     <p className="mt-2 text-lg font-extrabold tracking-tight text-ink">
-                      {b.contact_name || b.contact_email || '—'}
+                      {deleted ? 'Διαγραμμένος λογαριασμός' : b.contact_name || b.contact_email || '—'}
                     </p>
+                    {deleted ? (
+                      <p className="mt-1 text-sm text-zinc-500">
+                        Τα προσωπικά στοιχεία αφαιρέθηκαν μετά από αίτημα διαγραφής.
+                      </p>
+                    ) : (
                     <div className="mt-1 flex flex-col gap-0.5 text-sm text-zinc-600">
                       <a className="w-fit hover:text-accent-dark" href={`tel:${b.contact_phone}`}>
                         {b.contact_phone}
@@ -305,12 +317,14 @@ export default async function BookingsPage({
                         {b.contact_address}
                       </p>
                     </div>
+                    )}
                   </div>
                   <p className="text-2xl font-extrabold tracking-tight text-ink">
                     {euros(b.amount_cents)}
                   </p>
                 </div>
 
+                {deleted ? null : (
                 <div className="mt-3 max-w-md">
                   <BookingMap
                     address={b.contact_address}
@@ -318,6 +332,7 @@ export default async function BookingsPage({
                     lng={b.contact_lng}
                   />
                 </div>
+                )}
 
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-accent-soft px-3 py-1 text-xs font-bold text-accent-dark">
@@ -385,7 +400,8 @@ export default async function BookingsPage({
                   />
                 </div>
               </li>
-            ))}
+            );
+            })}
           </ul>
         )}
       </div>

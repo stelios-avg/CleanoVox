@@ -251,7 +251,7 @@ export type Database = {
       product_orders: {
         Row: {
           id: string;
-          user_id: string;
+          user_id: string | null;
           contact_email: string;
           contact_phone: string;
           contact_address: string;

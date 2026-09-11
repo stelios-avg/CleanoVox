@@ -114,7 +114,9 @@ export default function PaymentScreen({ navigation, route }: Props) {
         </Text>
         <Text style={styles.totalMeta}>
           {t(`service.${route.params.option}`)} · {route.params.date} ·{' '}
-          {route.params.timeSlot}
+          {route.params.timeSlots && new Set(route.params.timeSlots).size > 1
+            ? t('summary.perVisit')
+            : route.params.timeSlot}
           {route.params.dates && route.params.dates.length > 1
             ? ` · ${route.params.dates.length}`
             : ''}

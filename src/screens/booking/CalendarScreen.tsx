@@ -124,6 +124,9 @@ export default function CalendarScreen({ navigation, route }: Props) {
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
   const [weekdayPicks, setWeekdayPicks] = useState<number[]>([]);
   const [startHour, setStartHour] = useState<number | null>(null);
+  /** Plan bookings: pick one time for all visits or one per visit. */
+  const [perDayTimes, setPerDayTimes] = useState(false);
+  const [perDaySlots, setPerDaySlots] = useState<Record<string, number>>({});
   const [allDay, setAllDay] = useState(false);
   const [extraHours, setExtraHours] = useState(0);
   const [bookedByIso, setBookedByIso] = useState<Record<string, BookedRange[]>>({});
@@ -235,6 +238,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
     }
     setSelectedDates(datesInMonthForWeekdays(year, month, picks, visitsNeeded, minDate));
     setStartHour(null);
+    setPerDaySlots({});
     setAllDay(false);
     setExtraHours(0);
   };
@@ -253,6 +257,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
         )
       );
       setStartHour(null);
+      setPerDaySlots({});
       setAllDay(false);
       setExtraHours(0);
       return;
@@ -260,6 +265,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
     if (isPlan) {
       setSelectedDates([]);
       setStartHour(null);
+      setPerDaySlots({});
       setAllDay(false);
       setExtraHours(0);
     }
@@ -289,6 +295,13 @@ export default function CalendarScreen({ navigation, route }: Props) {
     }
     const iso = toISODate(day);
     setWeekdayPicks([]);
+    setPerDaySlots((prev) => {
+      if (!(iso in prev)) {
+        return prev;
+      }
+      const { [iso]: _removed, ...rest } = prev;
+      return rest;
+    });
     setSelectedDates((prev) => {
       const sameMonth =
         prev.length === 0 ||
@@ -322,12 +335,13 @@ export default function CalendarScreen({ navigation, route }: Props) {
     month: 'long',
   });
 
+  const slotBlockedOn = (iso: string, hour: number) => {
+    const ranges = bookedByIso[iso] ?? [];
+    return isSlotTaken(hour, duration, ranges) || isSlotStartPassed(iso, hour);
+  };
+
   const slotBlocked = (hour: number) =>
-    selectedDates.some((day) => {
-      const iso = toISODate(day);
-      const ranges = bookedByIso[iso] ?? [];
-      return isSlotTaken(hour, duration, ranges) || isSlotStartPassed(iso, hour);
-    });
+    selectedDates.some((day) => slotBlockedOn(toISODate(day), hour));
 
   const maxExtra =
     startHour !== null && !allDay && !isPlan
@@ -352,14 +366,40 @@ export default function CalendarScreen({ navigation, route }: Props) {
   const nothingAvailable = allSlotsTaken && allDayTaken;
   const datesReady = selectedDates.length === visitsNeeded;
 
+  const sortedIsos = useMemo(
+    () =>
+      [...selectedDates]
+        .sort((a, b) => a.getTime() - b.getTime())
+        .map(toISODate),
+    [selectedKey]
+  );
+  const usePerDay = isPlan && perDayTimes;
+  const perDayReady =
+    usePerDay &&
+    sortedIsos.every(
+      (iso) => perDaySlots[iso] != null && !slotBlockedOn(iso, perDaySlots[iso])
+    );
+  const timeReady = usePerDay ? perDayReady : startHour !== null;
+
+  const togglePerDay = (next: boolean) => {
+    setPerDayTimes(next);
+    setStartHour(null);
+    setPerDaySlots({});
+    setAllDay(false);
+    setExtraHours(0);
+  };
+
   const handleContinue = () => {
-    if (!datesReady || startHour === null) {
+    if (!datesReady || !timeReady) {
       return;
     }
-    const dates = [...selectedDates]
-      .sort((a, b) => a.getTime() - b.getTime())
-      .map(toISODate);
-    if (dates.some((iso) => isSlotStartPassed(iso, startHour))) {
+    const dates = sortedIsos;
+    if (usePerDay) {
+      if (dates.some((iso) => isSlotStartPassed(iso, perDaySlots[iso]))) {
+        setPerDaySlots({});
+        return;
+      }
+    } else if (startHour === null || dates.some((iso) => isSlotStartPassed(iso, startHour))) {
       setStartHour(null);
       setAllDay(false);
       return;
@@ -369,10 +409,14 @@ export default function CalendarScreen({ navigation, route }: Props) {
       : allDay
         ? ALL_DAY_DURATION_HOURS
         : duration + extraHours;
+    const timeSlots = usePerDay
+      ? dates.map((iso) => slotLabel(perDaySlots[iso], duration))
+      : undefined;
     navigation.navigate('BookingSummary', {
       date: dates[0],
       dates: isPlan ? dates : undefined,
-      timeSlot: slotLabel(startHour, hours),
+      timeSlot: timeSlots ? timeSlots[0] : slotLabel(startHour!, hours),
+      timeSlots,
       category: categoryFor(option),
       option,
       rooms,
@@ -603,13 +647,71 @@ export default function CalendarScreen({ navigation, route }: Props) {
         {selectedDates.length > 0 ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('calendar.slotsFor')}</Text>
+            {isPlan ? (
+              <View style={styles.chipWrap}>
+                <Chip
+                  label={t('calendar.sameTimeAll')}
+                  selected={!perDayTimes}
+                  onPress={() => togglePerDay(false)}
+                />
+                <Chip
+                  label={t('calendar.perDayTimes')}
+                  selected={perDayTimes}
+                  onPress={() => togglePerDay(true)}
+                />
+              </View>
+            ) : null}
             <Text style={styles.slotsDate}>
               {isPlan
-                ? t('calendar.sameTime', { n: String(selectedDates.length) })
+                ? usePerDay
+                  ? t('calendar.perDayHint')
+                  : t('calendar.sameTime', { n: String(selectedDates.length) })
                 : selectedPretty}
             </Text>
             {loadingSlots ? (
               <ActivityIndicator color={colors.accent} style={{ marginVertical: 16 }} />
+            ) : usePerDay ? (
+              <View style={{ gap: 14 }}>
+                {sortedIsos.map((iso) => {
+                  const pretty = new Date(`${iso}T12:00:00`).toLocaleDateString(locale, {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                  });
+                  const dayHours = slotStartHours.filter(
+                    (hour) => !slotBlockedOn(iso, hour)
+                  );
+                  return (
+                    <View key={iso} style={{ gap: 8 }}>
+                      <Text style={styles.perDayLabel}>{pretty}</Text>
+                      {dayHours.length === 0 ? (
+                        <View style={styles.hintRow}>
+                          <Ionicons
+                            name="close-circle-outline"
+                            size={18}
+                            color={colors.textSecondary}
+                          />
+                          <Text style={styles.hintText}>{t('calendar.noSlots')}</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.chipWrap}>
+                          {slotStartHours.map((hour) => (
+                            <Chip
+                              key={`${iso}-${hour}`}
+                              label={slotLabel(hour, duration)}
+                              selected={perDaySlots[iso] === hour}
+                              disabled={slotBlockedOn(iso, hour)}
+                              onPress={() =>
+                                setPerDaySlots((prev) => ({ ...prev, [iso]: hour }))
+                              }
+                            />
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
             ) : nothingAvailable ? (
               <View style={styles.hintRow}>
                 <Ionicons name="close-circle-outline" size={18} color={colors.textSecondary} />
@@ -647,7 +749,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
               </Text>
             ) : null}
 
-            {startHour !== null && isPlan ? (
+            {startHour !== null && isPlan && !usePerDay ? (
               <Text style={styles.slotsDate}>
                 {slotLabel(startHour, duration)} · {duration} {t('unit.hours')}
               </Text>
@@ -686,7 +788,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
         <PillButton
           label={t('calendar.continue')}
           onPress={handleContinue}
-          disabled={!datesReady || startHour === null}
+          disabled={!datesReady || !timeReady}
         />
       </View>
     </View>
@@ -829,6 +931,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: fonts.medium,
     color: colors.textSecondary,
+  },
+  perDayLabel: {
+    fontSize: 14,
+    fontFamily: fonts.bold,
+    color: colors.textPrimary,
+    textTransform: 'capitalize',
   },
   grid: {
     flexDirection: 'row',

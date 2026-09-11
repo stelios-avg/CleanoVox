@@ -20,10 +20,15 @@ export async function createBooking(input: CreateBookingInput): Promise<Booking 
   const supplies = input.supplies ?? [];
   const extras = allowedExtras(input.option, input.extras);
   const pushToken = getCachedPushToken() ?? (await registerPushNotifications());
-  const dates =
-    input.dates && input.dates.length > 0
-      ? [...input.dates].sort()
-      : [input.date];
+  // Pair each visit date with its slot BEFORE sorting so per-visit times
+  // (plan bookings) stay attached to the right day.
+  const visits = (input.dates && input.dates.length > 0 ? input.dates : [input.date])
+    .map((date, index) => ({
+      date,
+      timeSlot: input.timeSlots?.[index] ?? input.timeSlot,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const dates = visits.map((visit) => visit.date);
   const totalCents = bookingGrandTotalCents(
     input.option,
     input.extraHours,
@@ -81,10 +86,10 @@ export async function createBooking(input: CreateBookingInput): Promise<Booking 
     });
   }
 
-  const rows = dates.map((serviceDate, index) => ({
+  const rows = visits.map((visit, index) => ({
     user_id: user?.id ?? null,
-    service_date: serviceDate,
-    time_slot: input.timeSlot,
+    service_date: visit.date,
+    time_slot: visit.timeSlot,
     category: input.category,
     option: input.option,
     contact_name: input.contact.name.trim(),

@@ -5,6 +5,7 @@ import { shiftIsoDate, todayInCyprus, type ClosedRange } from '@/lib/slots';
 import { createClient } from '@/lib/supabase/server';
 import { DateJump } from './date-jump';
 import { SlotBoard } from './slot-board';
+import { isDeletedCustomer } from '@/lib/deleted-customer';
 
 function prettyDate(iso: string) {
   return new Date(`${iso}T12:00:00`).toLocaleDateString('el-GR', {
@@ -98,7 +99,11 @@ export default async function SlotsPage({
                   <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-bold">
                     {b.time_slot}
                   </span>
-                  <span className="font-bold text-ink">{b.contact_name || '—'}</span>
+                  <span className="font-bold text-ink">
+                    {isDeletedCustomer(b.contact_name)
+                      ? 'Διαγραμμένος λογαριασμός'
+                      : b.contact_name || '—'}
+                  </span>
                   <span className="text-zinc-500">{b.option}</span>
                   <span className="text-xs font-semibold uppercase text-zinc-400">{b.status}</span>
                 </li>
