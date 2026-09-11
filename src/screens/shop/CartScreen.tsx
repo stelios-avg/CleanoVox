@@ -15,6 +15,7 @@ import { SERVICE_FEE_CENTS, formatEuros, withServiceFee } from '../../constants/
 import { useCart, type CartItem } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { useI18n } from '../../i18n/LanguageContext';
+import { maxPurchasable } from '../../services/shop';
 import { colors, fonts, radii, spacing } from '../../theme';
 import type { RootStackParamList } from '../../navigation/types';
 
@@ -25,6 +26,7 @@ function CartRow({ item }: { item: CartItem }) {
   const { add, setQuantity } = useCart();
   const { product, quantity } = item;
   const name = locale === 'el' ? product.name_el : product.name_en;
+  const atMax = quantity >= maxPurchasable(product);
 
   return (
     <View style={styles.row}>
@@ -49,7 +51,15 @@ function CartRow({ item }: { item: CartItem }) {
           />
         </PressableScale>
         <Text style={styles.stepValue}>{quantity}</Text>
-        <PressableScale onPress={() => add(product)} style={styles.stepBtn} hitSlop={6}>
+        <PressableScale
+          onPress={() => {
+            if (!atMax) {
+              add(product);
+            }
+          }}
+          style={[styles.stepBtn, atMax ? styles.stepBtnDisabled : null]}
+          hitSlop={6}
+        >
           <Ionicons name="add" size={17} color={colors.textOnAccent} />
         </PressableScale>
       </View>
@@ -168,6 +178,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  stepBtnDisabled: {
+    opacity: 0.35,
   },
   stepValue: {
     minWidth: 22,

@@ -1,20 +1,22 @@
 import React, { useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
-import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { useAuth } from '../context/AuthContext';
 import { useI18n } from '../i18n/LanguageContext';
+import type { TranslationKey } from '../i18n/translations';
 import { supabase } from '../lib/supabase';
 import { navigateToBookingCompleted } from '../navigation/root-navigation';
+import { listMyBookings } from '../services/bookings';
 import {
+  cancelArrivalReminder,
   formatArrivalWhen,
-  getCachedPushToken,
-  hoursUntilArrival,
+  isWithinArrivalReminderWindow,
   parseNoticeData,
   presentArrivalNotice,
   presentCompletedNotice,
   registerPushNotifications,
+  remotePushWorks,
   savePushTokenToProfile,
+  scheduleArrivalReminder,
 } from '../services/notifications';
 
 let handledResponseId: string | null = null;
@@ -32,6 +34,14 @@ function openFromNotice(data: unknown) {
   });
 }
 
+function addressLine(
+  t: (key: TranslationKey, params?: Record<string, string>) => string,
+  address?: string | null
+) {
+  const trimmed = address?.trim();
+  return trimmed ? t('notify.addressLine', { address: trimmed }) : '';
+}
+
 /** Registers for notifications and shows a local banner when an admin accepts or completes a visit. */
 export function BookingNotifications() {
   const { session } = useAuth();
@@ -40,16 +50,45 @@ export function BookingNotifications() {
 
   useEffect(() => {
     let alive = true;
-    void registerPushNotifications().then(async (token) => {
-      if (!alive || !token || !session?.userId) {
+    void (async () => {
+      const token = await registerPushNotifications();
+      if (!alive) {
         return;
       }
-      await savePushTokenToProfile(session.userId, token);
-    });
+      if (token && session?.userId) {
+        await savePushTokenToProfile(session.userId, token);
+      }
+      if (!session?.userId || remotePushWorks()) {
+        return;
+      }
+      try {
+        const rows = await listMyBookings();
+        if (!alive) {
+          return;
+        }
+        for (const booking of rows) {
+          if (booking.status === 'accepted' && booking.arrival_time && booking.service_date) {
+            const line = addressLine(t, booking.contact_address);
+            await scheduleArrivalReminder({
+              bookingId: booking.id,
+              serviceDate: booking.service_date,
+              arrivalTime: booking.arrival_time,
+              address: booking.contact_address,
+              title: t('notify.reminderTitle'),
+              body: t('notify.reminderBody', { time: booking.arrival_time, addressLine: line }),
+            });
+          } else {
+            await cancelArrivalReminder(booking.id);
+          }
+        }
+      } catch {
+        // Local reminder backup is best-effort.
+      }
+    })();
     return () => {
       alive = false;
     };
-  }, [session?.userId]);
+  }, [locale, session?.userId, t]);
 
   useEffect(() => {
     const handle = (response: Notifications.NotificationResponse | null) => {
@@ -95,30 +134,56 @@ export function BookingNotifications() {
             return;
           }
 
+          if (
+            next.status === 'cancelled' ||
+            next.status === 'rejected' ||
+            next.status === 'completed'
+          ) {
+            void cancelArrivalReminder(next.id);
+          }
+
           const key = `${next.id}:${next.status}`;
           if (seen.current.has(key)) {
             return;
           }
 
-          const remotePushWorks =
-            Boolean(getCachedPushToken()) &&
-            !(Platform.OS === 'android' && Constants.appOwnership === 'expo');
+          const useLocalBackup = !remotePushWorks();
+          const line = addressLine(t, next.contact_address);
 
           if (next.status === 'accepted' && next.arrival_time && next.service_date) {
             seen.current.add(key);
+            if (!useLocalBackup) {
+              return;
+            }
             const when = formatArrivalWhen(next.service_date, next.arrival_time, locale);
-            const inHours = hoursUntilArrival(next.service_date, next.arrival_time, locale);
-            const body = inHours
-              ? t('notify.arrivalBodyHours', { hours: inHours, when })
-              : t('notify.arrivalBody', { when });
-            if (!remotePushWorks) {
+            const inWindow = isWithinArrivalReminderWindow(next.service_date, next.arrival_time);
+            if (inWindow) {
+              void scheduleArrivalReminder({
+                bookingId: next.id,
+                serviceDate: next.service_date,
+                arrivalTime: next.arrival_time,
+                address: next.contact_address,
+                title: t('notify.reminderTitle'),
+                body: t('notify.reminderBody', { time: next.arrival_time, addressLine: line }),
+                presentIfDue: true,
+              });
+            } else {
               void presentArrivalNotice({
                 bookingId: next.id,
                 serviceDate: next.service_date,
                 arrivalTime: next.arrival_time,
                 locale,
                 title: t('notify.arrivalTitle'),
-                body,
+                body: t('notify.arrivalBody', { when, addressLine: line }),
+                address: next.contact_address,
+              });
+              void scheduleArrivalReminder({
+                bookingId: next.id,
+                serviceDate: next.service_date,
+                arrivalTime: next.arrival_time,
+                address: next.contact_address,
+                title: t('notify.reminderTitle'),
+                body: t('notify.reminderBody', { time: next.arrival_time, addressLine: line }),
               });
             }
             return;
@@ -132,7 +197,7 @@ export function BookingNotifications() {
               timeSlot: next.time_slot,
               address: next.contact_address,
             });
-            if (!remotePushWorks) {
+            if (useLocalBackup) {
               void presentCompletedNotice({
                 bookingId: next.id,
                 title: t('notify.completedTitle'),

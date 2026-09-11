@@ -91,6 +91,16 @@ const el = {
   'calendar.title': 'Διάλεξε ημέρα & ώρα',
   'calendar.step': 'Βήμα 2 από 3 — πότε να έρθουμε;',
   'calendar.pickDate': 'Διάλεξε ημέρα',
+  'calendar.pickDates': 'Διάλεξε τις ημέρες του μήνα',
+  'calendar.planHint':
+    '{freq} — διάλεξε {n} ημέρες για τον {month} (ή πάτα τις σταθερές μέρες πάνω στο ημερολόγιο).',
+  'calendar.planCount': '{picked} / {n} επισκέψεις',
+  'calendar.visitCount': '{n} επισκέψεις / μήνα',
+  'calendar.monthTooShort':
+    'Αυτός ο μήνας δεν έχει αρκετές ημέρες. Πήγαινε στον επόμενο μήνα.',
+  'calendar.pickDaysHint':
+    'Διάλεξε τις σταθερές μέρες της εβδομάδας ή πάτα τις ημερομηνίες στο ημερολόγιο.',
+  'calendar.sameTime': 'Ίδια ώρα και για τις {n} επισκέψεις',
   'calendar.slotsFor': 'Διαθέσιμες ώρες',
   'calendar.pickDayHint': 'Πάτησε μια ημέρα στο ημερολόγιο για να δεις τις διαθέσιμες ώρες.',
   'calendar.extraHours': 'Έξτρα ώρες',
@@ -120,16 +130,19 @@ const el = {
   'quote.from': 'από {price}',
   'quote.indicative': 'Ενδεικτικά',
   'quote.indicativeHint':
-    '€13/ώρα · 40 m² στην τιμή (από €26 / 2 ώρες) · +€0,50 κάθε έξτρα τετραγωνικό. Έξτρα ώρες €13.',
+    '€13/ώρα · από €26 / 2 ώρες. Τα τετραγωνικά προτείνουν πακέτο, χωρίς έξτρα χρέωση. Έξτρα ώρες €13.',
   'quote.indicativeHintEvents':
-    '€16/ώρα · 40 m² στην τιμή (από €64 / 4 ώρες) · +€0,50 κάθε έξτρα τετραγωνικό. Έξτρα ώρες €16.',
+    '€16/ώρα · από €64 / 4 ώρες. Χωρίς έξτρα χρέωση τετραγωνικών. Έξτρα ώρες €16.',
   'quote.indicativeHintIroning':
     '€16 / 10 τεμάχια · κάθε επόμενα 10 τεμάχια έχουν €2 έκπτωση. Πάτα Άλλο για όσα θέλεις.',
   'quote.indicativeHintDeep':
-    '€18/ώρα · 40 m² στην τιμή (από €54 / 3 ώρες) · +€0,50 κάθε έξτρα τετραγωνικό. Έξτρα ώρες €18.',
+    '€18/ώρα · από €54 / 3 ώρες. Χωρίς έξτρα χρέωση τετραγωνικών. Έξτρα ώρες €18.',
   'quote.included': 'Περιλαμβάνονται',
   'quote.includedSqm': '{n} m²',
   'quote.overage': '+{price} έξτρα',
+  'quote.suggestedOption': 'Προτεινόμενη επιλογή',
+  'quote.sqmHintSuggest': 'Διάλεξε τετραγωνικά — θα προτείνουμε πακέτο. Μπορείς να το αλλάξεις.',
+  'quote.sqmSuggest': 'Πρόταση: {option}',
   'quote.continue': 'Συνέχεια στο ημερολόγιο',
   'quote.bookNow': 'Κράτηση τώρα',
   'quote.description': 'Περιγραφή',
@@ -190,6 +203,7 @@ const el = {
   'summary.option': 'Επιλογή',
   'summary.rooms': 'Δωμάτια',
   'summary.day': 'Ημέρα',
+  'summary.days': 'Ημέρες',
   'summary.time': 'Ώρα',
   'summary.sqm': 'Τετραγωνικά',
   'summary.extraHours': 'Έξτρα ώρες',
@@ -344,9 +358,14 @@ const el = {
   'bookings.cancelYes': 'Ναι, ακύρωση',
   'bookings.cancelNo': 'Πίσω',
   'bookings.arrival': 'Άφιξη {time}',
-  'notify.arrivalTitle': 'Η καθαρίστρια έρχεται',
-  'notify.arrivalBody': '{when} θα είναι εκεί η καθαρίστρια.',
+  'notify.arrivalTitle': 'Η κράτησή σου εγκρίθηκε',
+  'notify.arrivalBody':
+    'Θα έρθει {when}.{addressLine} Θα σε ειδοποιήσουμε 1 ώρα πριν. Να είσαι σπίτι για να της ανοίξεις την πόρτα.',
   'notify.arrivalBodyHours': '{hours} — {when} θα είναι εκεί η καθαρίστρια.',
+  'notify.addressLine': ' Διεύθυνση: {address}.',
+  'notify.reminderTitle': 'Η καθαρίστρια έρχεται σε 1 ώρα',
+  'notify.reminderBody':
+    'Άφιξη στις {time}.{addressLine} Βεβαιώσου ότι βρίσκει το σπίτι και άνοιξέ της την πόρτα.',
   'notify.completedTitle': 'Η κράτησή σου ολοκληρώθηκε!',
   'notify.completedBody': 'Συγχαρητήρια — αξιολόγησε την επίσκεψη και άφησε tip αν θέλεις.',
   'completed.title': 'Η κράτησή σου ολοκληρώθηκε!',
@@ -430,6 +449,9 @@ const el = {
   'shop.cartEmpty': 'Το καλάθι σου είναι άδειο',
   'shop.cartEmptyHint': 'Πρόσθεσε προϊόντα από τις κατηγορίες του καταστήματος.',
   'shop.emptyCategory': 'Δεν υπάρχουν προϊόντα σε αυτή την κατηγορία ακόμα.',
+  'shop.outOfStock': 'Εξαντλήθηκε',
+  'shop.outOfStockOrder':
+    'Κάποια προϊόντα εξαντλήθηκαν. Μείωσε την ποσότητα και ξαναπροσπάθησε.',
   'shop.total': 'Σύνολο',
   'shop.checkout': 'Ολοκλήρωση παραγγελίας',
   'shop.loginPrompt': 'Χρειάζεσαι λογαριασμό για να στείλεις παραγγελία.',
@@ -545,6 +567,16 @@ const en: Record<TranslationKey, string> = {
   'calendar.title': 'Pick a day & time',
   'calendar.step': 'Step 2 of 3 — when should we come?',
   'calendar.pickDate': 'Pick a day',
+  'calendar.pickDates': 'Pick the days of the month',
+  'calendar.planHint':
+    '{freq} — pick {n} days in {month} (or tap the weekday labels above the calendar).',
+  'calendar.planCount': '{picked} / {n} visits',
+  'calendar.visitCount': '{n} visits / month',
+  'calendar.monthTooShort':
+    'This month does not have enough remaining days. Go to the next month.',
+  'calendar.pickDaysHint':
+    'Pick the weekdays, or tap the dates on the calendar.',
+  'calendar.sameTime': 'Same time for all {n} visits',
   'calendar.slotsFor': 'Available times',
   'calendar.pickDayHint': 'Tap a day on the calendar to see available times.',
   'calendar.extraHours': 'Extra hours',
@@ -573,16 +605,19 @@ const en: Record<TranslationKey, string> = {
   'quote.from': 'from {price}',
   'quote.indicative': 'Indicative',
   'quote.indicativeHint':
-    '€13/hour · 40 m² included (from €26 / 2 hours) · +€0.50 per extra m². Extra hours €13.',
+    '€13/hour · from €26 / 2 hours. Square meters suggest a package — no extra m² charge. Extra hours €13.',
   'quote.indicativeHintEvents':
-    '€16/hour · 40 m² included (from €64 / 4 hours) · +€0.50 per extra m². Extra hours €16.',
+    '€16/hour · from €64 / 4 hours. No extra charge for square meters. Extra hours €16.',
   'quote.indicativeHintIroning':
     '€16 / 10 pieces · €2 off every extra 10 pieces. Tap Other to enter any amount.',
   'quote.indicativeHintDeep':
-    '€18/hour · 40 m² included (from €54 / 3 hours) · +€0.50 per extra m². Extra hours €18.',
+    '€18/hour · from €54 / 3 hours. No extra charge for square meters. Extra hours €18.',
   'quote.included': 'Included',
   'quote.includedSqm': '{n} m²',
   'quote.overage': '+{price} extra',
+  'quote.suggestedOption': 'Suggested option',
+  'quote.sqmHintSuggest': 'Pick the size — we’ll suggest a package. You can change it.',
+  'quote.sqmSuggest': 'Suggested: {option}',
   'quote.continue': 'Continue to calendar',
   'quote.bookNow': 'Book now',
   'quote.description': 'Description',
@@ -640,6 +675,7 @@ const en: Record<TranslationKey, string> = {
   'summary.option': 'Option',
   'summary.rooms': 'Rooms',
   'summary.day': 'Day',
+  'summary.days': 'Days',
   'summary.time': 'Time',
   'summary.sqm': 'Square meters',
   'summary.extraHours': 'Extra hours',
@@ -788,9 +824,14 @@ const en: Record<TranslationKey, string> = {
   'bookings.cancelYes': 'Yes, cancel',
   'bookings.cancelNo': 'Back',
   'bookings.arrival': 'Arrival {time}',
-  'notify.arrivalTitle': 'Your cleaner is coming',
-  'notify.arrivalBody': 'The cleaner will be there {when}.',
+  'notify.arrivalTitle': 'Your booking is confirmed',
+  'notify.arrivalBody':
+    'The cleaner will arrive {when}.{addressLine} We’ll remind you 1 hour before. Be home to open the door.',
   'notify.arrivalBodyHours': '{hours} — the cleaner will be there {when}.',
+  'notify.addressLine': ' Address: {address}.',
+  'notify.reminderTitle': 'Your cleaner is coming in 1 hour',
+  'notify.reminderBody':
+    'Arrival at {time}.{addressLine} Make sure they can find the house and open the door.',
   'notify.completedTitle': 'Your booking is complete!',
   'notify.completedBody': 'Congrats — rate the visit and leave a tip if you like.',
   'completed.title': 'Your booking is complete!',
@@ -872,6 +913,9 @@ const en: Record<TranslationKey, string> = {
   'shop.cartEmpty': 'Your cart is empty',
   'shop.cartEmptyHint': 'Add products from the shop categories.',
   'shop.emptyCategory': 'No products in this category yet.',
+  'shop.outOfStock': 'Out of stock',
+  'shop.outOfStockOrder':
+    'Some products sold out. Lower the quantity and try again.',
   'shop.total': 'Total',
   'shop.checkout': 'Checkout',
   'shop.loginPrompt': 'You need an account to place an order.',

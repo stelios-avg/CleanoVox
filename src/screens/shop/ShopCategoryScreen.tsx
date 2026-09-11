@@ -15,7 +15,7 @@ import { PressableScale } from '../../components/PressableScale';
 import { formatEuros } from '../../constants/payments';
 import { useCart } from '../../context/CartContext';
 import { useI18n } from '../../i18n/LanguageContext';
-import { listProductsByCategory } from '../../services/shop';
+import { listProductsByCategory, isOutOfStock, maxPurchasable } from '../../services/shop';
 import { colors, fonts, radii, spacing } from '../../theme';
 import type { RootStackParamList } from '../../navigation/types';
 import type { Product } from '../../types/database';
@@ -23,10 +23,12 @@ import type { Product } from '../../types/database';
 type Props = NativeStackScreenProps<RootStackParamList, 'ShopCategory'>;
 
 function ProductRow({ product }: { product: Product }) {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const { quantityOf, add, setQuantity } = useCart();
   const qty = quantityOf(product.id);
   const name = locale === 'el' ? product.name_el : product.name_en;
+  const soldOut = isOutOfStock(product);
+  const atMax = qty >= maxPurchasable(product);
 
   return (
     <View style={styles.row}>
@@ -42,9 +44,14 @@ function ProductRow({ product }: { product: Product }) {
           <Text style={styles.rowCode}>{product.code}</Text>
         </View>
         <Text style={styles.rowPrice}>{formatEuros(product.price_cents)}</Text>
+        {soldOut ? <Text style={styles.soldOut}>{t('shop.outOfStock')}</Text> : null}
       </View>
 
-      {qty === 0 ? (
+      {soldOut ? (
+        <View style={styles.soldOutBadge}>
+          <Ionicons name="close" size={18} color={colors.textSecondary} />
+        </View>
+      ) : qty === 0 ? (
         <PressableScale
           onPress={() => add(product)}
           style={styles.addBtn}
@@ -67,8 +74,12 @@ function ProductRow({ product }: { product: Product }) {
           </PressableScale>
           <Text style={styles.stepValue}>{qty}</Text>
           <PressableScale
-            onPress={() => add(product)}
-            style={styles.stepBtn}
+            onPress={() => {
+              if (!atMax) {
+                add(product);
+              }
+            }}
+            style={[styles.stepBtn, atMax ? styles.stepBtnDisabled : null]}
             hitSlop={6}
           >
             <Ionicons name="add" size={17} color={colors.textOnAccent} />
@@ -215,6 +226,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  soldOut: {
+    fontSize: 12,
+    fontFamily: fonts.bold,
+    color: '#b45309',
+  },
+  soldOutBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -227,6 +251,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  stepBtnDisabled: {
+    opacity: 0.35,
   },
   stepValue: {
     minWidth: 24,

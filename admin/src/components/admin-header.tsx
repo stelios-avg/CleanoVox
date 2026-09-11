@@ -25,9 +25,12 @@ export function AdminHeader({
               <h1 className="text-xl font-extrabold tracking-tight">{title}</h1>
               {extra}
             </div>
-            <nav className="mt-1 flex gap-3 text-xs font-bold">
+            <nav className="mt-1 flex flex-wrap gap-3 text-xs font-bold">
               <Link className="text-white/70 transition hover:text-accent" href="/bookings">
                 Κρατήσεις
+              </Link>
+              <Link className="text-white/70 transition hover:text-accent" href="/inventory">
+                Απόθεμα
               </Link>
               <Link className="text-white/70 transition hover:text-accent" href="/slots">
                 Ώρες

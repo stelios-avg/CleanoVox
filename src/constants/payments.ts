@@ -1,4 +1,6 @@
 import { BASE_DURATION_HOURS, hourRateCents } from './booking';
+import type { PlanBooking } from './plans';
+import { monthlyPlanPriceCents } from './plans';
 import type { BookingExtraId, BookingOption } from '../navigation/types';
 
 /**
@@ -15,12 +17,6 @@ export const APPLE_MERCHANT_ID = 'merchant.com.eagleclean.app';
 export const MERCHANT_NAME = 'Cleanovox';
 export const MERCHANT_COUNTRY_CODE = 'CY'; // ISO country of the business
 export const CURRENCY_CODE = 'EUR';
-
-/** Square meters included in the base price for every cleaning service. */
-export const INCLUDED_SQM = 40;
-
-/** €0.50 per m² above 40 m² (e.g. 60 m² → +€10.00). */
-export const SQM_OVERAGE_CENTS = 50;
 
 export const IRONING_PACK_SIZE = 10;
 /** First 10 pieces: €16. */
@@ -74,10 +70,10 @@ export function withServiceFee(cents: number): number {
   return cents + SERVICE_FEE_CENTS;
 }
 
-/** Indicative "from" price from square meters or ironing pieces (before extra hours). */
+/** Indicative "from" price: hours × rate, or ironing pieces. Square meters do not change the price. */
 export function indicativePriceCents(
   option: BookingOption,
-  squareMeters: number,
+  _squareMeters: number,
   _rooms?: number,
   pieces?: number
 ): number {
@@ -85,9 +81,7 @@ export function indicativePriceCents(
     const count = pieces != null && pieces > 0 ? pieces : 0;
     return count > 0 ? ironingPriceCents(count) : SERVICE_PRICES.Ironing;
   }
-  const sqm = Number.isFinite(squareMeters) && squareMeters > 0 ? squareMeters : 0;
-  const extraSqm = Math.max(0, sqm - INCLUDED_SQM);
-  return SERVICE_PRICES[option] + extraSqm * SQM_OVERAGE_CENTS;
+  return SERVICE_PRICES[option];
 }
 
 /** Indicative price plus the per-hour charge for extra hours. */
@@ -159,10 +153,14 @@ export function bookingGrandTotalCents(
   rooms?: number,
   supplies: { unitPriceCents: number; quantity: number }[] = [],
   pieces?: number,
-  extras?: BookingExtraId[]
+  extras?: BookingExtraId[],
+  plan?: PlanBooking | null
 ): number {
+  const cleaning = plan
+    ? monthlyPlanPriceCents(plan.frequency, plan.visitHours)
+    : bookingTotalCents(option, extraHours, squareMeters, rooms, pieces);
   return (
-    bookingTotalCents(option, extraHours, squareMeters, rooms, pieces) +
+    cleaning +
     suppliesTotalCents(supplies) +
     extrasTotalCents(allowedExtras(option, extras)) +
     SERVICE_FEE_CENTS

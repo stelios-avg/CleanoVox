@@ -125,7 +125,11 @@ export default function CheckoutScreen({ navigation }: Props) {
         },
       ]);
     } catch (e) {
-      Alert.alert(t('auth.errorTitle'), (e as Error).message);
+      const message = (e as Error).message ?? '';
+      Alert.alert(
+        t('auth.errorTitle'),
+        /out of stock/i.test(message) ? t('shop.outOfStockOrder') : message
+      );
     } finally {
       setPlacing(false);
     }

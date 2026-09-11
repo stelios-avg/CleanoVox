@@ -5,7 +5,10 @@ import { supabase } from '../lib/supabase';
 import type { ContactDetails } from '../navigation/types';
 import type { Product, ProductOrder, ProductOrderItem } from '../types/database';
 
-type CatalogRow = Omit<Product, 'created_at'> & { image?: string };
+type CatalogRow = Omit<Product, 'created_at' | 'stock'> & {
+  image?: string;
+  stock?: number | null;
+};
 
 /** Instant local catalog — browsing never waits on the network. */
 function localProducts(category: string): Product[] {
@@ -15,15 +18,49 @@ function localProducts(category: string): Product[] {
   return (catalog as CatalogRow[])
     .filter((p) => p.category === category && p.active)
     .sort((a, b) => a.sort - b.sort)
-    .map(({ image: _image, ...p }) => ({ ...p, created_at: '' }));
+    .map(({ image: _image, ...p }) => ({ ...p, created_at: '', stock: p.stock ?? null }));
 }
 
 export function catalogProducts(category: string): Product[] {
   return localProducts(category);
 }
 
+/** Null stock is untracked (unlimited). 0 is sold out. */
+export function maxPurchasable(product: Product): number {
+  if (product.stock == null) {
+    return Number.POSITIVE_INFINITY;
+  }
+  return Math.max(0, product.stock);
+}
+
+export function isOutOfStock(product: Product): boolean {
+  return product.stock === 0;
+}
+
 export async function listProductsByCategory(category: string): Promise<Product[]> {
-  return localProducts(category);
+  const local = localProducts(category);
+  const ids = local.map((p) => p.id);
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, stock, active')
+    .in('id', ids);
+
+  if (error || !data) {
+    return local;
+  }
+
+  const byId = new Map(data.map((row) => [row.id, row]));
+  return local.flatMap((product) => {
+    const row = byId.get(product.id);
+    if (!row || !row.active) {
+      return [];
+    }
+    return [{ ...product, stock: row.stock, active: row.active }];
+  });
 }
 
 export type OrderItemInput = {
@@ -110,5 +147,5 @@ export async function listMyOrders(): Promise<MyOrder[]> {
     throw new Error(error.message);
   }
 
-  return (data as MyOrder[] | null) ?? [];
+  return (data as unknown as MyOrder[] | null) ?? [];
 }

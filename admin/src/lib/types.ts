@@ -69,6 +69,7 @@ export type Database = {
           amount_cents: number;
           status: BookingStatus;
           arrival_time: string | null;
+          arrival_reminder_sent_at: string | null;
           push_token: string | null;
           payment_intent_id: string | null;
           admin_notes: string | null;
@@ -80,6 +81,7 @@ export type Database = {
           status?: BookingStatus;
           admin_notes?: string | null;
           arrival_time?: string | null;
+          arrival_reminder_sent_at?: string | null;
         };
         Relationships: [];
       };
@@ -114,6 +116,27 @@ export type Database = {
         Update: Record<string, never>;
         Relationships: [];
       };
+      products: {
+        Row: {
+          id: string;
+          code: string;
+          category: string;
+          name_el: string;
+          name_en: string;
+          variant_label: string | null;
+          price_cents: number;
+          sort: number;
+          active: boolean;
+          stock: number | null;
+          created_at: string;
+        };
+        Insert: Record<string, unknown>;
+        Update: {
+          stock?: number | null;
+          active?: boolean;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -125,3 +148,4 @@ export type Database = {
 export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type Booking = Database['public']['Tables']['bookings']['Row'];
 export type BookingReview = Database['public']['Tables']['booking_reviews']['Row'];
+export type Product = Database['public']['Tables']['products']['Row'];

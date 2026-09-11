@@ -102,6 +102,7 @@ export type Database = {
           amount_cents: number;
           status: BookingStatus;
           arrival_time: string | null;
+          arrival_reminder_sent_at: string | null;
           push_token: string | null;
           payment_intent_id: string | null;
           admin_notes: string | null;
@@ -134,6 +135,7 @@ export type Database = {
           amount_cents: number;
           status?: BookingStatus;
           arrival_time?: string | null;
+          arrival_reminder_sent_at?: string | null;
           push_token?: string | null;
           payment_intent_id?: string | null;
           admin_notes?: string | null;
@@ -166,6 +168,7 @@ export type Database = {
           amount_cents?: number;
           status?: BookingStatus;
           arrival_time?: string | null;
+          arrival_reminder_sent_at?: string | null;
           push_token?: string | null;
           payment_intent_id?: string | null;
           admin_notes?: string | null;
@@ -214,6 +217,7 @@ export type Database = {
           price_cents: number;
           sort: number;
           active: boolean;
+          stock: number | null;
           created_at: string;
         };
         Insert: {
@@ -226,6 +230,7 @@ export type Database = {
           price_cents: number;
           sort?: number;
           active?: boolean;
+          stock?: number | null;
           created_at?: string;
         };
         Update: {
@@ -238,6 +243,7 @@ export type Database = {
           price_cents?: number;
           sort?: number;
           active?: boolean;
+          stock?: number | null;
           created_at?: string;
         };
         Relationships: [];

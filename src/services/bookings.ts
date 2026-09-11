@@ -3,7 +3,7 @@ import { BOOKING_EXTRAS, SERVICE_FEE_CENTS, allowedExtras, bookingGrandTotalCent
 import { supabase } from '../lib/supabase';
 import type { BookingSelection, ContactDetails } from '../navigation/types';
 import type { Booking, BookingReview, BookingStatus } from '../types/database';
-import { getCachedPushToken, registerPushNotifications } from './notifications';
+import { cancelArrivalReminder, getCachedPushToken, registerPushNotifications } from './notifications';
 
 export type CreateBookingInput = BookingSelection & {
   contact: ContactDetails;
@@ -20,10 +20,70 @@ export async function createBooking(input: CreateBookingInput): Promise<Booking 
   const supplies = input.supplies ?? [];
   const extras = allowedExtras(input.option, input.extras);
   const pushToken = getCachedPushToken() ?? (await registerPushNotifications());
+  const dates =
+    input.dates && input.dates.length > 0
+      ? [...input.dates].sort()
+      : [input.date];
+  const totalCents = bookingGrandTotalCents(
+    input.option,
+    input.extraHours,
+    input.squareMeters,
+    input.rooms,
+    supplies,
+    input.pieces,
+    extras,
+    input.plan
+  );
 
-  const row = {
+  const supplyLines = [
+    ...supplies.map((item) => ({
+      product_id: item.productId,
+      name_el: item.nameEl,
+      name_en: item.nameEn,
+      variant_label: item.variantLabel,
+      unit_price_cents: item.unitPriceCents,
+      quantity: item.quantity,
+    })),
+    ...extras.flatMap((id) => {
+      const extra = BOOKING_EXTRAS.find((item) => item.id === id);
+      if (!extra) {
+        return [];
+      }
+      return [
+        {
+          product_id: `extra:${extra.id}`,
+          name_el: extra.nameEl,
+          name_en: extra.nameEn,
+          variant_label: null as string | null,
+          unit_price_cents: extra.priceCents,
+          quantity: 1,
+        },
+      ];
+    }),
+    {
+      product_id: 'fee:service',
+      name_el: 'Service fee',
+      name_en: 'Service fee',
+      variant_label: null as string | null,
+      unit_price_cents: SERVICE_FEE_CENTS,
+      quantity: 1,
+    },
+  ];
+
+  if (input.plan) {
+    supplyLines.unshift({
+      product_id: `plan:${input.plan.frequency}x${input.plan.visitHours}`,
+      name_el: `Μηνιαίο πακέτο · ${input.plan.frequency}×/εβδ. · ${input.plan.visitHours}ω`,
+      name_en: `Monthly plan · ${input.plan.frequency}×/week · ${input.plan.visitHours}h`,
+      variant_label: null,
+      unit_price_cents: 0,
+      quantity: dates.length,
+    });
+  }
+
+  const rows = dates.map((serviceDate, index) => ({
     user_id: user?.id ?? null,
-    service_date: input.date,
+    service_date: serviceDate,
     time_slot: input.timeSlot,
     category: input.category,
     option: input.option,
@@ -35,64 +95,22 @@ export async function createBooking(input: CreateBookingInput): Promise<Booking 
     contact_lng: input.contact.longitude ?? null,
     square_meters: input.option === 'Ironing' ? input.pieces ?? null : input.squareMeters,
     extra_hours: input.extraHours,
-    amount_cents: bookingGrandTotalCents(
-      input.option,
-      input.extraHours,
-      input.squareMeters,
-      input.rooms,
-      supplies,
-      input.pieces,
-      extras
-    ),
-    supplies: [
-      ...supplies.map((item) => ({
-        product_id: item.productId,
-        name_el: item.nameEl,
-        name_en: item.nameEn,
-        variant_label: item.variantLabel,
-        unit_price_cents: item.unitPriceCents,
-        quantity: item.quantity,
-      })),
-      ...extras.flatMap((id) => {
-        const extra = BOOKING_EXTRAS.find((item) => item.id === id);
-        if (!extra) {
-          return [];
-        }
-        return [
-          {
-            product_id: `extra:${extra.id}`,
-            name_el: extra.nameEl,
-            name_en: extra.nameEn,
-            variant_label: null as string | null,
-            unit_price_cents: extra.priceCents,
-            quantity: 1,
-          },
-        ];
-      }),
-      {
-        product_id: 'fee:service',
-        name_el: 'Service fee',
-        name_en: 'Service fee',
-        variant_label: null as string | null,
-        unit_price_cents: SERVICE_FEE_CENTS,
-        quantity: 1,
-      },
-    ],
+    amount_cents: index === 0 ? totalCents : 0,
+    supplies: index === 0 ? supplyLines : [],
     status: input.status ?? 'paid',
     payment_intent_id: input.paymentIntentId ?? null,
     push_token: pushToken,
-  };
+  }));
 
   if (user) {
-    const { data, error } = await supabase.from('bookings').insert(row).select().single();
+    const { data, error } = await supabase.from('bookings').insert(rows).select().limit(1);
     if (error) {
       throw new Error(error.message);
     }
-    return data;
+    return data?.[0] ?? null;
   }
 
-  // Guest inserts cannot RETURNING under RLS (no SELECT policy for anon).
-  const { error } = await supabase.from('bookings').insert(row);
+  const { error } = await supabase.from('bookings').insert(rows);
   if (error) {
     throw new Error(error.message);
   }
@@ -178,6 +196,8 @@ export async function cancelBooking(id: string): Promise<void> {
   if (error) {
     throw new Error(error.message);
   }
+
+  await cancelArrivalReminder(id);
 }
 
 /**

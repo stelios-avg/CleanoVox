@@ -26,15 +26,27 @@ import {
   slotLabel,
   type BookedRange,
 } from '../../constants/booking';
+import {
+  countBookableDaysInMonth,
+  datesInMonthForWeekdays,
+  visitsPerMonth,
+} from '../../constants/plans';
 import { getClosedSlots } from '../../services/bookings';
 import { checkServiceArea, type ServiceAreaStatus } from '../../services/serviceArea';
 import { supabase } from '../../lib/supabase';
 import { useI18n } from '../../i18n/LanguageContext';
+import type { TranslationKey } from '../../i18n/translations';
 import { categoryFor } from '../../navigation/types';
 import { colors, fonts, radii, spacing } from '../../theme';
 import type { BookingStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<BookingStackParamList, 'Calendar'>;
+
+const FREQ_KEY: Record<1 | 2 | 3, TranslationKey> = {
+  1: 'plans.freq1',
+  2: 'plans.freq2',
+  3: 'plans.freq3',
+};
 
 /** Local (not UTC) YYYY-MM-DD, so days don't shift across timezones. */
 function toISODate(d: Date): string {
@@ -95,9 +107,11 @@ function Chip({
 export default function CalendarScreen({ navigation, route }: Props) {
   const { t, locale } = useI18n();
   const insets = useSafeAreaInsets();
-  const { option, rooms, squareMeters, pieces } = route.params;
+  const { option, rooms, squareMeters, pieces, plan } = route.params;
+  const isPlan = plan != null;
+  const visitsNeeded = plan ? visitsPerMonth(plan.frequency) : 1;
 
-  const duration = BASE_DURATION_HOURS[option];
+  const duration = plan?.visitHours ?? BASE_DURATION_HOURS[option];
   const slotStartHours = useMemo(() => getSlotStartHours(duration), [duration]);
 
   const today = new Date();
@@ -107,11 +121,12 @@ export default function CalendarScreen({ navigation, route }: Props) {
   const [monthCursor, setMonthCursor] = useState(
     () => new Date(today.getFullYear(), today.getMonth(), 1)
   );
-  const [selected, setSelected] = useState<Date | null>(null);
+  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [weekdayPicks, setWeekdayPicks] = useState<number[]>([]);
   const [startHour, setStartHour] = useState<number | null>(null);
   const [allDay, setAllDay] = useState(false);
   const [extraHours, setExtraHours] = useState(0);
-  const [bookedRanges, setBookedRanges] = useState<BookedRange[]>([]);
+  const [bookedByIso, setBookedByIso] = useState<Record<string, BookedRange[]>>({});
   const [loadingSlots, setLoadingSlots] = useState(false);
 
   const [areaStatus, setAreaStatus] = useState<ServiceAreaStatus | 'checking'>(
@@ -125,22 +140,36 @@ export default function CalendarScreen({ navigation, route }: Props) {
     runAreaCheck();
   }, [runAreaCheck]);
 
+  const selectedKey = selectedDates.map(toISODate).sort().join(',');
+  const selected = selectedDates[selectedDates.length - 1] ?? null;
+  const bookedRanges = useMemo(
+    () => Object.values(bookedByIso).flat(),
+    [bookedByIso]
+  );
+
   useEffect(() => {
-    if (!selected) {
+    if (selectedDates.length === 0) {
+      setBookedByIso({});
       return;
     }
     let stale = false;
     setLoadingSlots(true);
-    getClosedSlots(toISODate(selected))
-      .then((ranges) => {
-        if (!stale) {
-          setBookedRanges(ranges);
-        }
+    Promise.all(
+      selectedDates.map(async (day) => {
+        const iso = toISODate(day);
+        const ranges = await getClosedSlots(iso).catch(() => [] as BookedRange[]);
+        return [iso, ranges] as const;
       })
-      .catch(() => {
-        if (!stale) {
-          setBookedRanges([]);
+    )
+      .then((rows) => {
+        if (stale) {
+          return;
         }
+        const next: Record<string, BookedRange[]> = {};
+        for (const [iso, ranges] of rows) {
+          next[iso] = ranges;
+        }
+        setBookedByIso(next);
       })
       .finally(() => {
         if (!stale) {
@@ -150,10 +179,10 @@ export default function CalendarScreen({ navigation, route }: Props) {
     return () => {
       stale = true;
     };
-  }, [selected]);
+  }, [selectedKey]);
 
   useEffect(() => {
-    if (!selected) {
+    if (isPlan || !selected) {
       return;
     }
     const iso = toISODate(selected);
@@ -163,18 +192,25 @@ export default function CalendarScreen({ navigation, route }: Props) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'closed_slots', filter: `service_date=eq.${iso}` },
         () => {
-          void getClosedSlots(iso).then(setBookedRanges).catch(() => {});
+          void getClosedSlots(iso)
+            .then((ranges) => setBookedByIso({ [iso]: ranges }))
+            .catch(() => {});
         }
       )
       .subscribe();
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [selected]);
+  }, [isPlan, selected]);
 
   const year = monthCursor.getFullYear();
   const month = monthCursor.getMonth();
   const grid = useMemo(() => getMonthGrid(year, month), [year, month]);
+  const bookableInMonth = useMemo(
+    () => countBookableDaysInMonth(year, month, minDate),
+    [year, month, minDate]
+  );
+  const monthTooShort = isPlan && bookableInMonth < visitsNeeded;
 
   const atCurrentMonth =
     year === today.getFullYear() && month === today.getMonth();
@@ -192,16 +228,80 @@ export default function CalendarScreen({ navigation, route }: Props) {
     year: 'numeric',
   });
 
-  const changeMonth = (delta: number) => {
-    setMonthCursor(new Date(year, month + delta, 1));
-  };
-
-  const pickDay = (day: Date) => {
-    setSelected(day);
+  const applyWeekdays = (picks: number[]) => {
+    setWeekdayPicks(picks);
+    if (!plan || picks.length !== plan.frequency) {
+      return;
+    }
+    setSelectedDates(datesInMonthForWeekdays(year, month, picks, visitsNeeded, minDate));
     setStartHour(null);
     setAllDay(false);
     setExtraHours(0);
-    setBookedRanges([]);
+  };
+
+  const changeMonth = (delta: number) => {
+    const next = new Date(year, month + delta, 1);
+    setMonthCursor(next);
+    if (isPlan && weekdayPicks.length === (plan?.frequency ?? 0)) {
+      setSelectedDates(
+        datesInMonthForWeekdays(
+          next.getFullYear(),
+          next.getMonth(),
+          weekdayPicks,
+          visitsNeeded,
+          minDate
+        )
+      );
+      setStartHour(null);
+      setAllDay(false);
+      setExtraHours(0);
+      return;
+    }
+    if (isPlan) {
+      setSelectedDates([]);
+      setStartHour(null);
+      setAllDay(false);
+      setExtraHours(0);
+    }
+  };
+
+  const toggleWeekday = (jsDay: number) => {
+    if (!isPlan || !plan) {
+      return;
+    }
+    const exists = weekdayPicks.includes(jsDay);
+    const next = exists
+      ? weekdayPicks.filter((day) => day !== jsDay)
+      : weekdayPicks.length >= plan.frequency
+        ? [...weekdayPicks.slice(1), jsDay]
+        : [...weekdayPicks, jsDay];
+    applyWeekdays(next);
+  };
+
+  const pickDay = (day: Date) => {
+    if (!isPlan) {
+      setSelectedDates([day]);
+      setStartHour(null);
+      setAllDay(false);
+      setExtraHours(0);
+      setBookedByIso({});
+      return;
+    }
+    const iso = toISODate(day);
+    setWeekdayPicks([]);
+    setSelectedDates((prev) => {
+      const sameMonth =
+        prev.length === 0 ||
+        (prev[0].getFullYear() === day.getFullYear() && prev[0].getMonth() === day.getMonth());
+      const base = sameMonth ? prev : [];
+      if (base.some((item) => toISODate(item) === iso)) {
+        return base.filter((item) => toISODate(item) !== iso);
+      }
+      if (base.length >= visitsNeeded) {
+        return base;
+      }
+      return [...base, day].sort((a, b) => a.getTime() - b.getTime());
+    });
   };
 
   const pickSlot = (hour: number) => {
@@ -222,8 +322,15 @@ export default function CalendarScreen({ navigation, route }: Props) {
     month: 'long',
   });
 
+  const slotBlocked = (hour: number) =>
+    selectedDates.some((day) => {
+      const iso = toISODate(day);
+      const ranges = bookedByIso[iso] ?? [];
+      return isSlotTaken(hour, duration, ranges) || isSlotStartPassed(iso, hour);
+    });
+
   const maxExtra =
-    startHour !== null && !allDay
+    startHour !== null && !allDay && !isPlan
       ? maxExtraHoursWithBookings(startHour, duration, bookedRanges)
       : 0;
   useEffect(() => {
@@ -234,38 +341,49 @@ export default function CalendarScreen({ navigation, route }: Props) {
   }, [maxExtra, allDay]);
 
   const totalHours = allDay ? ALL_DAY_DURATION_HOURS : duration + extraHours;
-  const selectedIso = selected ? toISODate(selected) : null;
   const allSlotsTaken =
+    selectedDates.length > 0 &&
     !loadingSlots &&
-    slotStartHours.every(
-      (hour) =>
-        isSlotTaken(hour, duration, bookedRanges) ||
-        (selectedIso != null && isSlotStartPassed(selectedIso, hour))
-    );
+    slotStartHours.every((hour) => slotBlocked(hour));
 
   const allDayTaken =
-    selectedIso != null && isAllDayTaken(selectedIso, bookedRanges);
+    isPlan ||
+    selectedDates.some((day) => isAllDayTaken(toISODate(day), bookedByIso[toISODate(day)] ?? []));
   const nothingAvailable = allSlotsTaken && allDayTaken;
+  const datesReady = selectedDates.length === visitsNeeded;
 
   const handleContinue = () => {
-    if (!selected || startHour === null) {
+    if (!datesReady || startHour === null) {
       return;
     }
-    if (isSlotStartPassed(toISODate(selected), startHour)) {
+    const dates = [...selectedDates]
+      .sort((a, b) => a.getTime() - b.getTime())
+      .map(toISODate);
+    if (dates.some((iso) => isSlotStartPassed(iso, startHour))) {
       setStartHour(null);
       setAllDay(false);
       return;
     }
-    const hours = allDay ? ALL_DAY_DURATION_HOURS : duration + extraHours;
+    const hours = isPlan
+      ? duration
+      : allDay
+        ? ALL_DAY_DURATION_HOURS
+        : duration + extraHours;
     navigation.navigate('BookingSummary', {
-      date: toISODate(selected),
+      date: dates[0],
+      dates: isPlan ? dates : undefined,
       timeSlot: slotLabel(startHour, hours),
       category: categoryFor(option),
       option,
       rooms,
       squareMeters,
       pieces,
-      extraHours: allDay ? allDayExtraHours(duration) : extraHours,
+      extraHours: isPlan
+        ? Math.max(0, duration - BASE_DURATION_HOURS[option])
+        : allDay
+          ? allDayExtraHours(BASE_DURATION_HOURS[option])
+          : extraHours,
+      plan,
     });
   };
 
@@ -372,11 +490,25 @@ export default function CalendarScreen({ navigation, route }: Props) {
                     : ''
                 }`}
             {` · ${t('quote.hoursValue', { n: String(duration) })}`}
+            {plan
+              ? ` · ${t(FREQ_KEY[plan.frequency])} · ${t('calendar.visitCount', { n: String(visitsNeeded) })}`
+              : ''}
           </Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('calendar.pickDate')}</Text>
+          <Text style={styles.sectionTitle}>
+            {isPlan ? t('calendar.pickDates') : t('calendar.pickDate')}
+          </Text>
+          {plan ? (
+            <Text style={styles.slotsDate}>
+              {t('calendar.planHint', {
+                freq: t(FREQ_KEY[plan.frequency]),
+                n: String(visitsNeeded),
+                month: monthTitle,
+              })}
+            </Text>
+          ) : null}
           <View style={styles.calendarCard}>
             <View style={styles.monthHeader}>
               <PressableScale
@@ -394,11 +526,28 @@ export default function CalendarScreen({ navigation, route }: Props) {
             </View>
 
             <View style={styles.weekRow}>
-              {weekdayLabels.map((label) => (
-                <Text key={label} style={styles.weekdayLabel}>
-                  {label}
-                </Text>
-              ))}
+              {weekdayLabels.map((label, index) => {
+                const jsDay = (index + 1) % 7;
+                const picked = weekdayPicks.includes(jsDay);
+                if (!isPlan) {
+                  return (
+                    <Text key={`${label}-${index}`} style={styles.weekdayLabel}>
+                      {label}
+                    </Text>
+                  );
+                }
+                return (
+                  <PressableScale
+                    key={`${label}-${index}`}
+                    onPress={() => toggleWeekday(jsDay)}
+                    style={[styles.weekdayChip, picked && styles.weekdayChipOn]}
+                  >
+                    <Text style={[styles.weekdayLabel, picked && styles.weekdayLabelOn]}>
+                      {label}
+                    </Text>
+                  </PressableScale>
+                );
+              })}
             </View>
 
             <View style={styles.grid}>
@@ -407,8 +556,9 @@ export default function CalendarScreen({ navigation, route }: Props) {
                   return <View key={`empty-${i}`} style={styles.dayCell} />;
                 }
                 const disabled = day < minDate;
-                const isSelected =
-                  !!selected && toISODate(day) === toISODate(selected);
+                const isSelected = selectedDates.some(
+                  (item) => toISODate(item) === toISODate(day)
+                );
                 const isToday = toISODate(day) === toISODate(today);
                 return (
                   <View key={toISODate(day)} style={styles.dayCell}>
@@ -436,13 +586,28 @@ export default function CalendarScreen({ navigation, route }: Props) {
                 );
               })}
             </View>
+            {isPlan ? (
+              <Text style={styles.planCount}>
+                {t('calendar.planCount', {
+                  picked: String(selectedDates.length),
+                  n: String(visitsNeeded),
+                })}
+              </Text>
+            ) : null}
+            {monthTooShort ? (
+              <Text style={styles.planWarn}>{t('calendar.monthTooShort')}</Text>
+            ) : null}
           </View>
         </View>
 
-        {selected ? (
+        {selectedDates.length > 0 ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('calendar.slotsFor')}</Text>
-            <Text style={styles.slotsDate}>{selectedPretty}</Text>
+            <Text style={styles.slotsDate}>
+              {isPlan
+                ? t('calendar.sameTime', { n: String(selectedDates.length) })
+                : selectedPretty}
+            </Text>
             {loadingSlots ? (
               <ActivityIndicator color={colors.accent} style={{ marginVertical: 16 }} />
             ) : nothingAvailable ? (
@@ -453,9 +618,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
             ) : (
               <View style={styles.chipWrap}>
                 {slotStartHours.map((hour) => {
-                  const taken =
-                    isSlotTaken(hour, duration, bookedRanges) ||
-                    isSlotStartPassed(toISODate(selected), hour);
+                  const taken = slotBlocked(hour);
                   return (
                     <Chip
                       key={hour}
@@ -466,12 +629,14 @@ export default function CalendarScreen({ navigation, route }: Props) {
                     />
                   );
                 })}
+                {isPlan ? null : (
                 <Chip
                   label={t('calendar.allDay')}
                   selected={allDay}
                   disabled={allDayTaken}
                   onPress={pickAllDay}
                 />
+                )}
               </View>
             )}
 
@@ -482,7 +647,13 @@ export default function CalendarScreen({ navigation, route }: Props) {
               </Text>
             ) : null}
 
-            {startHour !== null && !allDay ? (
+            {startHour !== null && isPlan ? (
+              <Text style={styles.slotsDate}>
+                {slotLabel(startHour, duration)} · {duration} {t('unit.hours')}
+              </Text>
+            ) : null}
+
+            {startHour !== null && !allDay && !isPlan ? (
               <View style={{ gap: 10, marginTop: 8 }}>
                 <Text style={styles.sectionTitle}>{t('calendar.extraHours')}</Text>
                 <Text style={styles.slotsDate}>
@@ -504,7 +675,9 @@ export default function CalendarScreen({ navigation, route }: Props) {
         ) : (
           <View style={[styles.section, styles.hintRow]}>
             <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
-            <Text style={styles.hintText}>{t('calendar.pickDayHint')}</Text>
+            <Text style={styles.hintText}>
+              {isPlan ? t('calendar.pickDaysHint') : t('calendar.pickDayHint')}
+            </Text>
           </View>
         )}
       </ScrollView>
@@ -513,7 +686,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
         <PillButton
           label={t('calendar.continue')}
           onPress={handleContinue}
-          disabled={!selected || startHour === null}
+          disabled={!datesReady || startHour === null}
         />
       </View>
     </View>
@@ -622,6 +795,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 4,
   },
+  weekdayChip: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  weekdayChipOn: {
+    backgroundColor: colors.accentSoft,
+  },
   weekdayLabel: {
     flex: 1,
     textAlign: 'center',
@@ -629,6 +811,24 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     color: colors.textSecondary,
     textTransform: 'capitalize',
+  },
+  weekdayLabelOn: {
+    color: colors.accent,
+    flex: 0,
+  },
+  planCount: {
+    marginTop: 10,
+    textAlign: 'center',
+    fontSize: 13,
+    fontFamily: fonts.semiBold,
+    color: colors.textPrimary,
+  },
+  planWarn: {
+    marginTop: 6,
+    textAlign: 'center',
+    fontSize: 13,
+    fontFamily: fonts.medium,
+    color: colors.textSecondary,
   },
   grid: {
     flexDirection: 'row',

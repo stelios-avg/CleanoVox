@@ -1,4 +1,5 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
+import type { PlanBooking } from '../constants/plans';
 import type { ShopCategorySlug } from '../constants/shop';
 
 // ---------- Domain types used by the booking flow ----------
@@ -31,6 +32,20 @@ export function categoryFor(option: BookingOption): ServiceCategory {
     return 'ironing';
   }
   return isHomeSize(option) ? 'my-home' : 'cleaning-crew';
+}
+
+/** Map floor size to a suggested home package. Price stays hourly. */
+export function homeSizeFromSqm(sqm: number): HomeSize {
+  if (sqm <= 40) {
+    return 'Studio';
+  }
+  if (sqm <= 70) {
+    return '1 Bedroom';
+  }
+  if (sqm <= 100) {
+    return '2 Bedroom';
+  }
+  return '3 Bedroom';
 }
 
 /** Studio is 0 bedrooms; 3+ bedrooms use the 3 Bedroom rate. */
@@ -89,6 +104,10 @@ export type BookingSelection = {
   pieces?: number;
   /** Hours added on top of the base slot via the + stepper. */
   extraHours: number;
+  /** Monthly plan — calendar must collect frequency × 4 visit dates. */
+  plan?: PlanBooking;
+  /** All visit dates for a monthly plan. `date` stays the first visit. */
+  dates?: string[];
   /** Add-on services chosen on the summary (ironing, hoover, oven, fireplace). */
   extras?: BookingExtraId[];
   /** Set on the summary step: `[]` means continue without supplies. */
@@ -110,12 +129,13 @@ export type ContactDetails = {
 
 export type BookingStackParamList = {
   /** First step: rooms + sqm → indicative "from" price, then calendar. */
-  Quote: { option?: BookingOption } | undefined;
+  Quote: { option?: BookingOption; plan?: PlanBooking } | undefined;
   Calendar: {
     option: BookingOption;
     rooms: number;
     squareMeters: number;
     pieces?: number;
+    plan?: PlanBooking;
   };
   BookingSummary: BookingSelection;
   BookingSupplies: BookingSelection;

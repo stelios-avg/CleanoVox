@@ -70,37 +70,40 @@ function arrivalInstant(serviceDate: string, arrivalTime: string): Date | null {
   return new Date(instant);
 }
 
-function hoursUntilPhrase(serviceDate: string, arrivalTime: string): string | null {
-  const arrival = arrivalInstant(serviceDate, arrivalTime);
-  if (!arrival) {
-    return null;
-  }
-  const diffMs = arrival.getTime() - Date.now();
-  if (diffMs <= 0) {
-    return null;
-  }
-  const hours = Math.round(diffMs / 3_600_000);
-  if (hours < 1) {
-    return 'σε λιγότερο από μία ώρα';
-  }
-  if (hours === 1) {
-    return 'σε 1 ώρα';
-  }
-  return `σε ${hours} ώρες`;
+function addressClause(address?: string | null): string {
+  const trimmed = address?.trim();
+  return trimmed ? ` Διεύθυνση: ${trimmed}.` : '';
 }
 
-export function arrivalPushCopy(serviceDate: string, arrivalTime: string) {
+export function isWithinArrivalReminderWindow(serviceDate: string, arrivalTime: string): boolean {
+  const arrival = arrivalInstant(serviceDate, arrivalTime);
+  if (!arrival) {
+    return false;
+  }
+  const now = Date.now();
+  return arrival.getTime() - 3_600_000 <= now && now < arrival.getTime();
+}
+
+export function acceptedPushCopy(
+  serviceDate: string,
+  arrivalTime: string,
+  address?: string | null
+) {
   const dateLabel = new Date(`${serviceDate}T12:00:00`).toLocaleDateString('el-GR', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
   });
-  const hours = hoursUntilPhrase(serviceDate, arrivalTime);
   return {
-    title: 'Η καθαρίστρια έρχεται',
-    body: hours
-      ? `${hours.charAt(0).toUpperCase()}${hours.slice(1)}, ${dateLabel} στις ${arrivalTime}, θα είναι εκεί η καθαρίστρια.`
-      : `Στις ${dateLabel} στις ${arrivalTime} θα είναι εκεί η καθαρίστρια.`,
+    title: 'Η κράτησή σου εγκρίθηκε',
+    body: `Θα έρθει ${dateLabel} στις ${arrivalTime}.${addressClause(address)} Θα σε ειδοποιήσουμε 1 ώρα πριν. Να είσαι σπίτι για να της ανοίξεις την πόρτα.`,
+  };
+}
+
+export function arrivalSoonPushCopy(arrivalTime: string, address?: string | null) {
+  return {
+    title: 'Η καθαρίστρια έρχεται σε 1 ώρα',
+    body: `Άφιξη στις ${arrivalTime}.${addressClause(address)} Βεβαιώσου ότι βρίσκει το σπίτι και άνοιξέ της την πόρτα.`,
   };
 }
 

@@ -17,11 +17,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { PillButton } from '../../components/ui';
 import { PressableScale } from '../../components/PressableScale';
 import { BASE_DURATION_HOURS } from '../../constants/booking';
-import {
-  INCLUDED_SQM,
-  formatEuros,
-  indicativePriceCents,
-} from '../../constants/payments';
+import { formatEuros, indicativePriceCents } from '../../constants/payments';
+import { findMonthlyPlan } from '../../constants/plans';
 import { useI18n } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
 import {
@@ -29,6 +26,7 @@ import {
   HOME_SIZES,
   categoryFor,
   homeSizeFromRooms,
+  homeSizeFromSqm,
   isHomeSize,
   isIroning,
   roomsFromOption,
@@ -140,6 +138,7 @@ export default function QuoteScreen({ navigation, route }: Props) {
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const incoming = route.params?.option;
+  const plan = route.params?.plan;
   const serviceLocked = incoming != null;
 
   const [option, setOption] = useState<BookingOption | undefined>(incoming);
@@ -161,7 +160,7 @@ export default function QuoteScreen({ navigation, route }: Props) {
   const isEvents = option === 'Events';
   const ironing = option != null && isIroning(option);
   const roomChoices = homeService ? [0, 1, 2, 3] : [1, 2, 3, 4, 5, 6];
-  const duration = option ? BASE_DURATION_HOURS[option] : 2;
+  const duration = plan?.visitHours ?? (option ? BASE_DURATION_HOURS[option] : 2);
   const isDeep = option === 'Deep Cleaning';
   const includeBullets = ironing
     ? IRONING_BULLETS
@@ -172,6 +171,9 @@ export default function QuoteScreen({ navigation, route }: Props) {
         : INCLUDE_BULLETS;
 
   const priceCents = useMemo(() => {
+    if (plan) {
+      return findMonthlyPlan(plan.frequency, plan.visitHours).priceEuros * 100;
+    }
     if (!option) {
       return 0;
     }
@@ -181,7 +183,7 @@ export default function QuoteScreen({ navigation, route }: Props) {
       rooms,
       piecesValid ? pieces : undefined
     );
-  }, [option, rooms, sqmValid, squareMeters, piecesValid, pieces]);
+  }, [option, plan, rooms, sqmValid, squareMeters, piecesValid, pieces]);
 
   const pickService = (next: BookingOption) => {
     setOption(next);
@@ -199,6 +201,16 @@ export default function QuoteScreen({ navigation, route }: Props) {
     setCustomSqm(false);
     setSqm(String(value));
     setSqmError(false);
+    suggestHomeFromSqm(value);
+  };
+
+  const suggestHomeFromSqm = (value: number) => {
+    if (!option || !isHomeSize(option)) {
+      return;
+    }
+    const suggested = homeSizeFromSqm(value);
+    setOption(suggested);
+    setRooms(roomsFromOption(suggested));
   };
 
   const pickPieces = (value: number) => {
@@ -222,6 +234,7 @@ export default function QuoteScreen({ navigation, route }: Props) {
         rooms: 0,
         squareMeters: 0,
         pieces,
+        plan,
       });
       return;
     }
@@ -234,6 +247,7 @@ export default function QuoteScreen({ navigation, route }: Props) {
       option,
       rooms: option === 'Events' ? 0 : rooms,
       squareMeters,
+      plan,
     });
   };
 
@@ -286,7 +300,11 @@ export default function QuoteScreen({ navigation, route }: Props) {
           </View>
           <View style={styles.priceRow}>
             <Text style={styles.price}>
-              {option ? t('quote.from', { price: formatEuros(priceCents) }) : '—'}
+              {plan
+                ? `${formatEuros(priceCents)}${t('plans.perMonthShort')}`
+                : option
+                  ? t('quote.from', { price: formatEuros(priceCents) })
+                  : '—'}
             </Text>
           </View>
           <View style={styles.metaRow}>
@@ -295,11 +313,11 @@ export default function QuoteScreen({ navigation, route }: Props) {
               {t('quote.hoursValue', { n: String(duration) })}
             </Text>
           </View>
-          {option && !ironing ? (
+          {option && !ironing && sqmValid ? (
             <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>{t('quote.included')}</Text>
+              <Text style={styles.metaLabel}>{t('quote.sqm')}</Text>
               <Text style={styles.metaValue}>
-                {t('quote.includedSqm', { n: String(INCLUDED_SQM) })}
+                {t('quote.includedSqm', { n: String(squareMeters) })}
               </Text>
             </View>
           ) : null}
@@ -357,28 +375,12 @@ export default function QuoteScreen({ navigation, route }: Props) {
           </View>
         ) : null}
 
-        {!isEvents && !ironing ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('quote.rooms')}</Text>
-          <View style={styles.chipWrap}>
-            {roomChoices.map((count) => (
-              <Chip
-                key={count}
-                label={
-                  count === 0 ? t('quote.chipStudio') : t('quote.chipRooms', { n: String(count) })
-                }
-                selected={option != null && rooms === count}
-                disabled={!option}
-                onPress={() => pickRooms(count)}
-              />
-            ))}
-          </View>
-        </View>
-        ) : null}
-
         {!ironing ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('quote.sqm')}</Text>
+          {homeService ? (
+            <Text style={styles.bodyMuted}>{t('quote.sqmHintSuggest')}</Text>
+          ) : null}
           <View style={styles.chipWrap}>
             {SQM_PRESETS.map((value) => (
               <Chip
@@ -404,8 +406,13 @@ export default function QuoteScreen({ navigation, route }: Props) {
               <TextInput
                 value={sqm}
                 onChangeText={(v) => {
-                  setSqm(v.replace(/[^0-9]/g, ''));
+                  const next = v.replace(/[^0-9]/g, '');
+                  setSqm(next);
                   setSqmError(false);
+                  const parsed = parseInt(next, 10);
+                  if (Number.isFinite(parsed) && parsed > 0) {
+                    suggestHomeFromSqm(parsed);
+                  }
                 }}
                 placeholder={t('calendar.sqmPlaceholder')}
                 placeholderTextColor={colors.textSecondary}
@@ -418,6 +425,13 @@ export default function QuoteScreen({ navigation, route }: Props) {
           ) : null}
           {sqmError && !sqmValid ? (
             <Text style={styles.errorText}>{t('calendar.sqmError')}</Text>
+          ) : null}
+          {homeService && sqmValid ? (
+            <Text style={styles.bodyMuted}>
+              {t('quote.sqmSuggest', {
+                option: serviceLabel(t(`service.${homeSizeFromSqm(squareMeters)}`)),
+              })}
+            </Text>
           ) : null}
         </View>
         ) : (
@@ -466,6 +480,27 @@ export default function QuoteScreen({ navigation, route }: Props) {
           ) : null}
         </View>
         )}
+
+        {!isEvents && !ironing ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            {homeService ? t('quote.suggestedOption') : t('quote.rooms')}
+          </Text>
+          <View style={styles.chipWrap}>
+            {roomChoices.map((count) => (
+              <Chip
+                key={count}
+                label={
+                  count === 0 ? t('quote.chipStudio') : t('quote.chipRooms', { n: String(count) })
+                }
+                selected={option != null && rooms === count}
+                disabled={!option}
+                onPress={() => pickRooms(count)}
+              />
+            ))}
+          </View>
+        </View>
+        ) : null}
 
         <View style={styles.section}>
           <ScrollView

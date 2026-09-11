@@ -47,8 +47,7 @@ export default async function LoginPage() {
               Καλώς ήρθες
             </h2>
             <p className="mt-2 max-w-sm text-sm leading-relaxed text-zinc-500">
-              Συνδέσου για να δεις νέες κρατήσεις και να τις εγκρίνεις ή να τις
-              απορρίψεις.
+              Συνδέσου για κρατήσεις, απόθεμα marketplace και ώρες.
             </p>
           </div>
 

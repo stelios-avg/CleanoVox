@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import { maxPurchasable } from '../services/shop';
 import type { Product } from '../types/database';
 
 export type CartItem = {
@@ -31,10 +32,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const add = useCallback((product: Product) => {
     setItems((prev) => {
+      const max = maxPurchasable(product);
+      if (max <= 0) {
+        return prev;
+      }
       const existing = prev.find((i) => i.product.id === product.id);
       if (existing) {
         return prev.map((i) =>
-          i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
+          i.product.id === product.id
+            ? { ...i, quantity: Math.min(i.quantity + 1, max), product }
+            : i
         );
       }
       return [...prev, { product, quantity: 1 }];
@@ -49,7 +56,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) =>
       quantity <= 0
         ? prev.filter((i) => i.product.id !== productId)
-        : prev.map((i) => (i.product.id === productId ? { ...i, quantity } : i))
+        : prev.map((i) => {
+            if (i.product.id !== productId) {
+              return i;
+            }
+            return { ...i, quantity: Math.min(quantity, maxPurchasable(i.product)) };
+          })
     );
   }, []);
 

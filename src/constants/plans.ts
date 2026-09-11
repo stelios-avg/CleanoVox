@@ -37,6 +37,11 @@ export const MONTHLY_PLANS: MonthlyPlan[] = [
 export const PLAN_FREQUENCIES: PlanFrequency[] = [1, 2, 3];
 export const PLAN_VISIT_HOURS: PlanVisitHours[] = [2, 3, 4];
 
+export type PlanBooking = {
+  frequency: PlanFrequency;
+  visitHours: PlanVisitHours;
+};
+
 export function findMonthlyPlan(
   frequency: PlanFrequency,
   visitHours: PlanVisitHours
@@ -44,4 +49,55 @@ export function findMonthlyPlan(
   return MONTHLY_PLANS.find(
     (plan) => plan.frequency === frequency && plan.visitHours === visitHours
   ) as MonthlyPlan;
+}
+
+/** Billed month is 4 weeks, so 1×/week = 4 visits, 2× = 8, 3× = 12. */
+export function visitsPerMonth(frequency: PlanFrequency): number {
+  return frequency * 4;
+}
+
+export function monthlyPlanPriceCents(
+  frequency: PlanFrequency,
+  visitHours: PlanVisitHours
+): number {
+  return findMonthlyPlan(frequency, visitHours).priceEuros * 100;
+}
+
+/** Upcoming dates in a month that fall on the given JS weekdays (0=Sun). */
+export function datesInMonthForWeekdays(
+  year: number,
+  month: number,
+  weekdays: number[],
+  needed: number,
+  minDate: Date
+): Date[] {
+  if (weekdays.length === 0 || needed <= 0) {
+    return [];
+  }
+  const last = new Date(year, month + 1, 0).getDate();
+  const out: Date[] = [];
+  for (let day = 1; day <= last && out.length < needed; day += 1) {
+    const date = new Date(year, month, day);
+    date.setHours(0, 0, 0, 0);
+    if (date < minDate) {
+      continue;
+    }
+    if (weekdays.includes(date.getDay())) {
+      out.push(date);
+    }
+  }
+  return out;
+}
+
+export function countBookableDaysInMonth(year: number, month: number, minDate: Date): number {
+  const last = new Date(year, month + 1, 0).getDate();
+  let count = 0;
+  for (let day = 1; day <= last; day += 1) {
+    const date = new Date(year, month, day);
+    date.setHours(0, 0, 0, 0);
+    if (date >= minDate) {
+      count += 1;
+    }
+  }
+  return count;
 }

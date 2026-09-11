@@ -17,6 +17,7 @@ import {
   SERVICE_FEE_CENTS,
   suppliesTotalCents,
 } from '../../constants/payments';
+import { monthlyPlanPriceCents } from '../../constants/plans';
 import { getMyProfile } from '../../services/profile';
 import { completeContactFrom } from '../../utils/contact';
 import { colors, fonts, radii, spacing } from '../../theme';
@@ -72,9 +73,12 @@ export default function BookingSummaryScreen({ navigation, route }: Props) {
   const [extraIds, setExtraIds] = useState<BookingExtraId[]>(
     () => route.params.extras ?? []
   );
-  const { date, timeSlot, category, option, rooms, squareMeters, extraHours, supplies, pieces } =
+  const { date, dates, timeSlot, category, option, rooms, squareMeters, extraHours, supplies, pieces, plan } =
     route.params;
-  const cleaningAmount = bookingTotalCents(option, extraHours, squareMeters, rooms, pieces);
+  const visitDates = dates && dates.length > 0 ? dates : [date];
+  const cleaningAmount = plan
+    ? monthlyPlanPriceCents(plan.frequency, plan.visitHours)
+    : bookingTotalCents(option, extraHours, squareMeters, rooms, pieces);
   const suppliesAmount = suppliesTotalCents(supplies ?? []);
   const extrasAmount = extrasTotalCents(allowedExtras(option, extraIds));
   const amount = bookingGrandTotalCents(
@@ -84,7 +88,8 @@ export default function BookingSummaryScreen({ navigation, route }: Props) {
     rooms,
     supplies ?? [],
     pieces,
-    extraIds
+    extraIds,
+    plan
   );
   const choseSupplies = supplies !== undefined;
 
@@ -130,11 +135,15 @@ export default function BookingSummaryScreen({ navigation, route }: Props) {
   };
 
   const extraChoices = extrasForOption(option);
-  const prettyDate = new Date(date).toLocaleDateString(locale, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
+  const prettyDate = visitDates
+    .map((iso) =>
+      new Date(`${iso}T12:00:00`).toLocaleDateString(locale, {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+      })
+    )
+    .join(' · ');
 
   const rootNavigation =
     navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
@@ -171,11 +180,15 @@ export default function BookingSummaryScreen({ navigation, route }: Props) {
               }
             />
           ) : null}
-          <SummaryRow icon="calendar-outline" label={t('summary.day')} value={prettyDate} />
+          <SummaryRow
+            icon="calendar-outline"
+            label={visitDates.length > 1 ? t('summary.days') : t('summary.day')}
+            value={prettyDate}
+          />
           <SummaryRow
             icon="time-outline"
             label={t('summary.time')}
-            value={extraHours > 0 ? `${timeSlot} (+${extraHours})` : timeSlot}
+            value={extraHours > 0 && !plan ? `${timeSlot} (+${extraHours})` : timeSlot}
           />
           {option === 'Ironing' ? (
             <SummaryRow
@@ -190,7 +203,7 @@ export default function BookingSummaryScreen({ navigation, route }: Props) {
               value={`${squareMeters} m²`}
             />
           )}
-          {extraHours > 0 ? (
+          {extraHours > 0 && !plan ? (
             <SummaryRow
               icon="add-circle-outline"
               label={t('summary.extraHours')}

@@ -1,7 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { arrivalPushCopy, completedPushCopy, normalizeArrivalTime } from '@/lib/arrival';
+import {
+  acceptedPushCopy,
+  arrivalSoonPushCopy,
+  completedPushCopy,
+  isWithinArrivalReminderWindow,
+  normalizeArrivalTime,
+} from '@/lib/arrival';
 import { requireAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import type { BookingStatus } from '@/lib/types';
@@ -66,7 +72,7 @@ export async function acceptBooking(bookingId: string, arrivalTime: string) {
     .from('bookings')
     .update({ status: 'accepted', arrival_time: time })
     .eq('id', bookingId)
-    .select('id, service_date, arrival_time, push_token, user_id')
+    .select('id, service_date, arrival_time, contact_address, push_token, user_id')
     .single();
 
   if (error) {
@@ -76,13 +82,23 @@ export async function acceptBooking(bookingId: string, arrivalTime: string) {
   let notified = false;
   const token = await pushTokenForBooking(supabase, data);
   if (token && data.arrival_time) {
-    const copy = arrivalPushCopy(data.service_date, data.arrival_time);
+    const inWindow = isWithinArrivalReminderWindow(data.service_date, data.arrival_time);
+    const copy = inWindow
+      ? arrivalSoonPushCopy(data.arrival_time, data.contact_address)
+      : acceptedPushCopy(data.service_date, data.arrival_time, data.contact_address);
     try {
       await sendExpoPush(token, copy.title, copy.body, {
         bookingId: data.id,
-        type: 'booking_accepted',
+        type: inWindow ? 'booking_arrival_soon' : 'booking_accepted',
+        address: data.contact_address ?? '',
       });
       notified = true;
+      if (inWindow) {
+        await supabase
+          .from('bookings')
+          .update({ arrival_reminder_sent_at: new Date().toISOString() })
+          .eq('id', bookingId);
+      }
     } catch (e) {
       revalidatePath('/bookings');
       return { ok: true as const, notified: false, warning: (e as Error).message };

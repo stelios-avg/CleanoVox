@@ -167,7 +167,7 @@ export default function PlansScreen({ navigation }: Props) {
           onPress={() =>
             navigation.navigate('BookingFlow', {
               screen: 'Quote',
-              params: { option: 'Studio' },
+              params: { option: 'Studio', plan: { frequency, visitHours } },
             })
           }
           style={styles.cta}

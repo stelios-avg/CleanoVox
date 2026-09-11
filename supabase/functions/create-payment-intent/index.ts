@@ -11,11 +11,9 @@ const SERVICE_PRICES: Record<string, number> = {
   Events: 6400,
 };
 
-const INCLUDED_SQM = 40;
 const HOME_HOUR_CENTS = 1300;
 const DEEP_HOUR_CENTS = 1800;
 const EVENTS_HOUR_CENTS = 1600;
-const SQM_OVERAGE_CENTS = 50;
 const SERVICE_FEE_CENTS = 145;
 const IRONING_PACK_SIZE = 10;
 const IRONING_FIRST_PACK_CENTS = 1600;
@@ -80,6 +78,28 @@ function extrasCents(option: string, ids: unknown): number {
 
 type Supply = { unitPriceCents?: number; quantity?: number };
 
+/** Matches app `MONTHLY_PLANS` — never trust a client-sent price. */
+const MONTHLY_PLAN_CENTS: Record<string, number> = {
+  '1-2': 9500,
+  '1-3': 14500,
+  '1-4': 19000,
+  '2-2': 19000,
+  '2-3': 28500,
+  '2-4': 37500,
+  '3-2': 28500,
+  '3-3': 40500,
+  '3-4': 52500,
+};
+
+function monthlyPlanCents(frequency?: unknown, visitHours?: unknown): number | null {
+  const freq = Number(frequency);
+  const hours = Number(visitHours);
+  if (![1, 2, 3].includes(freq) || ![2, 3, 4].includes(hours)) {
+    return null;
+  }
+  return MONTHLY_PLAN_CENTS[`${freq}-${hours}`] ?? null;
+}
+
 function amountCents(body: {
   option?: string;
   extraHours?: number;
@@ -87,6 +107,8 @@ function amountCents(body: {
   pieces?: number;
   supplies?: Supply[];
   extras?: unknown;
+  planFrequency?: unknown;
+  planVisitHours?: unknown;
 }): number {
   const option = body.option ?? '';
   const extraHours = Math.max(0, Number(body.extraHours) || 0);
@@ -96,6 +118,10 @@ function amountCents(body: {
     return sum + price * qty;
   }, 0);
   const extras = extrasCents(option, body.extras);
+  const plan = monthlyPlanCents(body.planFrequency, body.planVisitHours);
+  if (plan != null) {
+    return plan + supplies + extras + SERVICE_FEE_CENTS;
+  }
   const rate = hourCents(option);
   if (option === 'Ironing') {
     const pieces = Math.max(0, Math.floor(Number(body.pieces) || 0));
@@ -105,9 +131,7 @@ function amountCents(body: {
   if (base == null) {
     throw new Error('Unknown service');
   }
-  const sqm = Number(body.squareMeters) > 0 ? Number(body.squareMeters) : 0;
-  const extraSqm = Math.max(0, sqm - INCLUDED_SQM);
-  return base + extraSqm * SQM_OVERAGE_CENTS + extraHours * rate + supplies + extras + SERVICE_FEE_CENTS;
+  return base + extraHours * rate + supplies + extras + SERVICE_FEE_CENTS;
 }
 
 const cors = {
@@ -137,6 +161,9 @@ Deno.serve(async (req) => {
       supplies?: Supply[];
       extras?: unknown;
       date?: string;
+      dates?: unknown;
+      planFrequency?: unknown;
+      planVisitHours?: unknown;
       timeSlot?: string;
       contactName?: string;
       contactEmail?: string;
@@ -159,6 +186,11 @@ Deno.serve(async (req) => {
       metadata: {
         option: body.option ?? '',
         date: body.date ?? '',
+        dates: Array.isArray(body.dates)
+          ? body.dates.filter((item): item is string => typeof item === 'string').join(',')
+          : '',
+        planFrequency: String(body.planFrequency ?? ''),
+        planVisitHours: String(body.planVisitHours ?? ''),
         timeSlot: body.timeSlot ?? '',
         contactName: body.contactName ?? '',
         extras: extrasMeta,

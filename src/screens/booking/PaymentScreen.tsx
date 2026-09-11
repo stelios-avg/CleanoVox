@@ -30,7 +30,8 @@ export default function PaymentScreen({ navigation, route }: Props) {
     route.params.rooms,
     route.params.supplies ?? [],
     route.params.pieces,
-    route.params.extras
+    route.params.extras,
+    route.params.plan
   );
 
   const [processing, setProcessing] = useState(false);
@@ -114,6 +115,9 @@ export default function PaymentScreen({ navigation, route }: Props) {
         <Text style={styles.totalMeta}>
           {t(`service.${route.params.option}`)} · {route.params.date} ·{' '}
           {route.params.timeSlot}
+          {route.params.dates && route.params.dates.length > 1
+            ? ` · ${route.params.dates.length}`
+            : ''}
         </Text>
         <Text style={styles.totalMeta}>
           {route.params.contact.name}

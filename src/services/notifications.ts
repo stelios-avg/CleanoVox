@@ -37,13 +37,17 @@ async function ensureAndroidChannel() {
   });
 }
 
+function remotePushSupported(): boolean {
+  // SDK 55+: remote push in Expo Go on Android throws instead of warning.
+  return !(Platform.OS === 'android' && Constants.appOwnership === 'expo');
+}
+
+export function remotePushWorks(): boolean {
+  return Boolean(cachedToken) && remotePushSupported();
+}
+
 /** Asks permission and stores an Expo push token when the device supports it. */
 export async function registerPushNotifications(): Promise<string | null> {
-  // SDK 55+: remote push in Expo Go on Android throws instead of warning.
-  if (Platform.OS === 'android' && Constants.appOwnership === 'expo') {
-    return null;
-  }
-
   try {
     await ensureAndroidChannel();
   } catch {
@@ -57,6 +61,10 @@ export async function registerPushNotifications(): Promise<string | null> {
     status = asked.status;
   }
   if (status !== 'granted') {
+    return null;
+  }
+
+  if (!remotePushSupported()) {
     return null;
   }
 
@@ -77,6 +85,48 @@ export async function savePushTokenToProfile(userId: string, token: string): Pro
   await supabase.from('profiles').update({ push_token: token }).eq('id', userId);
 }
 
+const CYPRUS_TZ = 'Europe/Nicosia';
+
+function offsetMsAt(instant: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(instant);
+  const map: Record<string, string> = {};
+  for (const part of parts) {
+    if (part.type !== 'literal') {
+      map[part.type] = part.value;
+    }
+  }
+  const asUtc = Date.UTC(
+    Number(map.year),
+    Number(map.month) - 1,
+    Number(map.day),
+    Number(map.hour),
+    Number(map.minute),
+    Number(map.second)
+  );
+  return asUtc - instant.getTime();
+}
+
+function arrivalInstant(serviceDate: string, arrivalTime: string): Date | null {
+  const [year, month, day] = serviceDate.split('-').map(Number);
+  const [hour, minute] = arrivalTime.split(':').map(Number);
+  if (![year, month, day, hour, minute].every((n) => Number.isFinite(n))) {
+    return null;
+  }
+  const utcGuess = Date.UTC(year, month - 1, day, hour, minute, 0);
+  let instant = utcGuess - offsetMsAt(new Date(utcGuess), CYPRUS_TZ);
+  instant = Date.UTC(year, month - 1, day, hour, minute, 0) - offsetMsAt(new Date(instant), CYPRUS_TZ);
+  return new Date(instant);
+}
+
 export function formatArrivalWhen(
   serviceDate: string,
   arrivalTime: string,
@@ -90,30 +140,72 @@ export function formatArrivalWhen(
   return `${dateLabel} · ${arrivalTime}`;
 }
 
-export function hoursUntilArrival(
-  serviceDate: string,
-  arrivalTime: string,
-  locale: string
-): string | null {
-  const [year, month, day] = serviceDate.split('-').map(Number);
-  const [hour, minute] = arrivalTime.split(':').map(Number);
-  if (![year, month, day, hour, minute].every((n) => Number.isFinite(n))) {
-    return null;
+export function isWithinArrivalReminderWindow(serviceDate: string, arrivalTime: string): boolean {
+  const arrival = arrivalInstant(serviceDate, arrivalTime);
+  if (!arrival) {
+    return false;
   }
-  const arrival = new Date(year, month - 1, day, hour, minute, 0, 0);
-  const diffMs = arrival.getTime() - Date.now();
-  if (diffMs <= 0) {
-    return null;
+  const now = Date.now();
+  return arrival.getTime() - 3_600_000 <= now && now < arrival.getTime();
+}
+
+function arrivalReminderId(bookingId: string) {
+  return `booking-arrival-1h-${bookingId}`;
+}
+
+export async function cancelArrivalReminder(bookingId: string): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(arrivalReminderId(bookingId)).catch(() => {});
+}
+
+/** Local 1-hour-before backup when remote Expo push is unavailable (Android Expo Go). */
+export async function scheduleArrivalReminder(input: {
+  bookingId: string;
+  serviceDate: string;
+  arrivalTime: string;
+  address?: string | null;
+  title: string;
+  body: string;
+  /** When due already, show immediately. Off for app-launch hydrate so it does not spam. */
+  presentIfDue?: boolean;
+}): Promise<void> {
+  const arrival = arrivalInstant(input.serviceDate, input.arrivalTime);
+  if (!arrival) {
+    return;
   }
-  const hours = Math.round(diffMs / 3_600_000);
-  const el = locale.toLowerCase().startsWith('el');
-  if (hours < 1) {
-    return el ? 'σε λιγότερο από μία ώρα' : 'in less than an hour';
+  const now = Date.now();
+  if (arrival.getTime() <= now) {
+    await cancelArrivalReminder(input.bookingId);
+    return;
   }
-  if (hours === 1) {
-    return el ? 'σε 1 ώρα' : 'in 1 hour';
+
+  const remindAt = new Date(arrival.getTime() - 3_600_000);
+  const isDue = remindAt.getTime() <= now + 5000;
+  if (isDue && !input.presentIfDue) {
+    return;
   }
-  return el ? `σε ${hours} ώρες` : `in ${hours} hours`;
+
+  await ensureAndroidChannel();
+  await cancelArrivalReminder(input.bookingId);
+
+  await Notifications.scheduleNotificationAsync({
+    identifier: arrivalReminderId(input.bookingId),
+    content: {
+      title: input.title,
+      body: input.body,
+      sound: 'default',
+      data: {
+        bookingId: input.bookingId,
+        type: 'booking_arrival_soon',
+        address: input.address ?? '',
+      },
+    },
+    trigger: isDue
+      ? null
+      : {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: remindAt,
+        },
+  });
 }
 
 export async function presentArrivalNotice(input: {
@@ -123,6 +215,7 @@ export async function presentArrivalNotice(input: {
   locale: string;
   title: string;
   body: string;
+  address?: string | null;
 }): Promise<void> {
   await ensureAndroidChannel();
   await Notifications.scheduleNotificationAsync({
@@ -131,7 +224,11 @@ export async function presentArrivalNotice(input: {
       title: input.title,
       body: input.body,
       sound: 'default',
-      data: { bookingId: input.bookingId, type: 'booking_accepted' },
+      data: {
+        bookingId: input.bookingId,
+        type: 'booking_accepted',
+        address: input.address ?? '',
+      },
     },
     trigger: null,
   });
