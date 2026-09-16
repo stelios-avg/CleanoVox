@@ -149,6 +149,9 @@ export async function completeBooking(bookingId: string) {
 
 export async function updateBookingStatus(bookingId: string, status: BookingStatus) {
   await requireAdmin();
+  if (status === 'rejected') {
+    return rejectBooking(bookingId);
+  }
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -162,6 +165,25 @@ export async function updateBookingStatus(bookingId: string, status: BookingStat
 
   revalidatePath('/bookings');
   return { ok: true as const };
+}
+
+/** Rejects the visit and refunds the Stripe charge when this row holds the payment. */
+export async function rejectBooking(bookingId: string) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { data, error } = await supabase.functions.invoke('reject-booking', {
+    body: { bookingId },
+  });
+  const payload = data as { error?: string; refunded?: boolean } | null;
+  if (error) {
+    return { error: payload?.error ?? error.message };
+  }
+  if (payload?.error) {
+    return { error: payload.error };
+  }
+
+  revalidatePath('/bookings');
+  return { ok: true as const, refunded: Boolean(payload?.refunded) };
 }
 
 export async function deleteBooking(bookingId: string) {

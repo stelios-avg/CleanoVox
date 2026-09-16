@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { acceptBooking, completeBooking, deleteBooking, saveAdminNotes, updateBookingStatus } from './actions';
+import { acceptBooking, completeBooking, deleteBooking, rejectBooking, saveAdminNotes } from './actions';
 import type { BookingStatus } from '@/lib/types';
 
 export function BookingRowActions({
@@ -19,11 +19,13 @@ export function BookingRowActions({
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [noteValue, setNoteValue] = useState(notes ?? '');
   const [arrival, setArrival] = useState(arrivalTime ?? suggestedArrival);
 
   const complete = () => {
     setError(null);
+    setInfo(null);
     startTransition(async () => {
       const result = await completeBooking(bookingId);
       if ('error' in result && result.error) {
@@ -36,18 +38,24 @@ export function BookingRowActions({
     });
   };
 
-  const run = (statusNext: BookingStatus) => {
+  const reject = () => {
     setError(null);
+    setInfo(null);
     startTransition(async () => {
-      const result = await updateBookingStatus(bookingId, statusNext);
-      if (result.error) {
+      const result = await rejectBooking(bookingId);
+      if ('error' in result && result.error) {
         setError(result.error);
+        return;
+      }
+      if ('refunded' in result && result.refunded) {
+        setInfo('Η κράτηση απορρίφθηκε και τα χρήματα επιστράφηκαν μέσω Stripe.');
       }
     });
   };
 
   const accept = () => {
     setError(null);
+    setInfo(null);
     startTransition(async () => {
       const result = await acceptBooking(bookingId, arrival);
       if ('error' in result && result.error) {
@@ -127,10 +135,10 @@ export function BookingRowActions({
           <button
             type="button"
             disabled={pending}
-            onClick={() => run('rejected')}
+            onClick={reject}
             className="rounded-full bg-red-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-red-700 active:scale-[0.97] disabled:opacity-50"
           >
-            Απόρριψη
+            Απόρριψη & επιστροφή
           </button>
         ) : null}
         <button
@@ -159,6 +167,7 @@ export function BookingRowActions({
         </button>
       </div>
       {error ? <p className="text-xs font-medium text-red-600">{error}</p> : null}
+      {info ? <p className="text-xs font-medium text-emerald-700">{info}</p> : null}
     </div>
   );
 }

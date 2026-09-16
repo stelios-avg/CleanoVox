@@ -10,6 +10,13 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: 'Cleanovox Admin',
   description: 'Διαχείριση κρατήσεων Cleanovox',
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/icon.png', type: 'image/png', sizes: '192x192' },
+    ],
+    apple: [{ url: '/apple-icon.png', sizes: '180x180' }],
+  },
 };
 
 export const viewport: Viewport = {
