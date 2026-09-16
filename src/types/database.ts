@@ -105,6 +105,7 @@ export type Database = {
           arrival_reminder_sent_at: string | null;
           push_token: string | null;
           payment_intent_id: string | null;
+          preferred_cleaner: string | null;
           admin_notes: string | null;
           created_at: string;
           updated_at: string;
@@ -138,6 +139,7 @@ export type Database = {
           arrival_reminder_sent_at?: string | null;
           push_token?: string | null;
           payment_intent_id?: string | null;
+          preferred_cleaner?: string | null;
           admin_notes?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -171,6 +173,7 @@ export type Database = {
           arrival_reminder_sent_at?: string | null;
           push_token?: string | null;
           payment_intent_id?: string | null;
+          preferred_cleaner?: string | null;
           admin_notes?: string | null;
           created_at?: string;
           updated_at?: string;

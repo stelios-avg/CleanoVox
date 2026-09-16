@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { PillButton } from '../../components/ui';
 import { PressableScale } from '../../components/PressableScale';
 import { BASE_DURATION_HOURS } from '../../constants/booking';
+import { TEAM_CLEANERS } from '../../constants/team';
 import { formatEuros, indicativePriceCents } from '../../constants/payments';
 import { findMonthlyPlan } from '../../constants/plans';
 import { useI18n } from '../../i18n/LanguageContext';
@@ -60,13 +61,6 @@ const IRONING_BULLETS: TranslationKey[] = [
   'quote.bulletClothes',
   'quote.bulletSteam',
 ];
-const TEAM_PHOTOS: ImageSourcePropType[] = [
-  require('../../../assets/images/team/cleaner-1.png'),
-  require('../../../assets/images/team/cleaner-2.png'),
-  require('../../../assets/images/team/cleaner-3.png'),
-  require('../../../assets/images/team/cleaner-4.png'),
-];
-const TEAM_RATINGS = [5, 5, 4.5, 5];
 const TEAM_RATING = 4.9;
 
 const DESC_KEY: Record<BookingOption, TranslationKey> = {
@@ -135,7 +129,7 @@ function Chip({
 }
 
 export default function QuoteScreen({ navigation, route }: Props) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const insets = useSafeAreaInsets();
   const incoming = route.params?.option;
   const plan = route.params?.plan;
@@ -151,6 +145,9 @@ export default function QuoteScreen({ navigation, route }: Props) {
   const [piecesText, setPiecesText] = useState('');
   const [customPieces, setCustomPieces] = useState(false);
   const [piecesError, setPiecesError] = useState(false);
+  const [preferredCleaner, setPreferredCleaner] = useState<string | undefined>(undefined);
+  const selectedCleaner = TEAM_CLEANERS.find((cleaner) => cleaner.id === preferredCleaner);
+  const shownRating = selectedCleaner?.rating ?? TEAM_RATING;
 
   const squareMeters = parseInt(sqm, 10);
   const sqmValid = Number.isFinite(squareMeters) && squareMeters > 0;
@@ -235,6 +232,7 @@ export default function QuoteScreen({ navigation, route }: Props) {
         squareMeters: 0,
         pieces,
         plan,
+        preferredCleaner,
       });
       return;
     }
@@ -248,6 +246,7 @@ export default function QuoteScreen({ navigation, route }: Props) {
       rooms: option === 'Events' ? 0 : rooms,
       squareMeters,
       plan,
+      preferredCleaner,
     });
   };
 
@@ -295,8 +294,8 @@ export default function QuoteScreen({ navigation, route }: Props) {
             {option ? serviceLabel(t(`service.${option}`)) : t('quote.title')}
           </Text>
           <View style={styles.summaryRating}>
-            <StarRow rating={TEAM_RATING} size={14} />
-            <Text style={styles.summaryRatingText}>{TEAM_RATING.toFixed(1)}</Text>
+            <StarRow rating={shownRating} size={14} />
+            <Text style={styles.summaryRatingText}>{shownRating.toFixed(1)}</Text>
           </View>
           <View style={styles.priceRow}>
             <Text style={styles.price}>
@@ -503,23 +502,48 @@ export default function QuoteScreen({ navigation, route }: Props) {
         ) : null}
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('quote.teamTitle')}</Text>
+          <Text style={styles.teamHint}>{t('quote.teamHint')}</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.teamRow}
           >
-            {TEAM_PHOTOS.map((source, index) => (
-              <View key={index} style={styles.teamCard}>
-                <Image source={source} style={styles.teamPhoto} />
-                <StarRow rating={TEAM_RATINGS[index] ?? 5} size={12} />
-              </View>
-            ))}
+            {TEAM_CLEANERS.map((cleaner) => {
+              const selected = preferredCleaner === cleaner.id;
+              return (
+                <PressableScale
+                  key={cleaner.id}
+                  style={[styles.teamCard, selected && styles.teamCardSelected]}
+                  onPress={() =>
+                    setPreferredCleaner((current) =>
+                      current === cleaner.id ? undefined : cleaner.id
+                    )
+                  }
+                >
+                  <View>
+                    <Image source={cleaner.photo} style={styles.teamPhoto} />
+                    {selected ? (
+                      <View style={styles.teamCheck}>
+                        <Ionicons name="checkmark" size={16} color="#fff" />
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text
+                    style={[styles.teamName, selected && styles.teamNameSelected]}
+                    numberOfLines={1}
+                  >
+                    {(language === 'el' ? cleaner.nameEl : cleaner.nameEn).split(' ')[0]}
+                  </Text>
+                  <StarRow rating={cleaner.rating} size={12} />
+                </PressableScale>
+              );
+            })}
           </ScrollView>
           <View style={styles.reviewRow}>
-            <StarRow rating={TEAM_RATING} size={22} />
-            <Text style={styles.ratingNumber}>{TEAM_RATING.toFixed(1)}</Text>
+            <StarRow rating={shownRating} size={22} />
+            <Text style={styles.ratingNumber}>{shownRating.toFixed(1)}</Text>
           </View>
-          <StarRow rating={5} size={22} />
         </View>
       </ScrollView>
 
@@ -735,6 +759,41 @@ const styles = StyleSheet.create({
   teamCard: {
     alignItems: 'center',
     gap: 8,
+    padding: 8,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  teamCardSelected: {
+    borderColor: colors.accent,
+    backgroundColor: colors.surface,
+  },
+  teamCheck: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  teamName: {
+    fontSize: 13,
+    fontFamily: fonts.semiBold,
+    color: colors.textSecondary,
+    maxWidth: 108,
+  },
+  teamNameSelected: {
+    color: colors.textPrimary,
+  },
+  teamHint: {
+    fontSize: 13,
+    fontFamily: fonts.regular,
+    color: colors.textSecondary,
+    marginTop: -4,
+    marginBottom: 10,
   },
   teamPhoto: {
     width: 108,

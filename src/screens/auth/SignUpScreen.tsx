@@ -91,16 +91,19 @@ export default function SignUpScreen({ navigation }: Props) {
         textContentType="newPassword"
         icon="lock-closed-outline"
       />
-      <PressableScale
-        onPress={() => navigation.navigate('Privacy')}
-        disabled={busy}
-        hitSlop={8}
-      >
-        <Text style={styles.legalText}>
-          {t('auth.privacyPrefix')}{' '}
-          <Text style={styles.footerLink}>{t('privacy.title')}</Text>
+      <Text style={styles.legalText}>
+        {t('auth.privacyPrefix')}{' '}
+        <Text
+          style={styles.footerLink}
+          onPress={() => navigation.navigate('LegalDoc', { doc: 'terms' })}
+        >
+          {t('legal.terms')}
         </Text>
-      </PressableScale>
+        {' & '}
+        <Text style={styles.footerLink} onPress={() => navigation.navigate('Privacy')}>
+          {t('privacy.title')}
+        </Text>
+      </Text>
       <View style={{ height: 4 }} />
       <PillButton
         label={busy ? t('auth.pleaseWait') : t('auth.create')}

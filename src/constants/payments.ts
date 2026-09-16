@@ -63,9 +63,6 @@ export function formatEuros(cents: number): string {
 /** Flat service fee added to every booking and marketplace order. */
 export const SERVICE_FEE_CENTS = 145;
 
-/** Monthly membership card. */
-export const MEMBERSHIP_PRICE_CENTS = 1499;
-
 export function withServiceFee(cents: number): number {
   return cents + SERVICE_FEE_CENTS;
 }

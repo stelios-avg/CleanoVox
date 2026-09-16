@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { PressableScale } from '../../components/PressableScale';
 import { slotDurationHours } from '../../constants/booking';
-import { cleanerForBooking } from '../../constants/team';
+import { cleanerById, cleanerForBooking } from '../../constants/team';
 import { useI18n } from '../../i18n/LanguageContext';
 import { getBookingReview, getMyBooking } from '../../services/bookings';
 import { colors, fonts, radii, spacing } from '../../theme';
@@ -66,7 +66,7 @@ export default function BookingCompletedScreen({ navigation, route }: Props) {
   const dateIso = booking?.service_date ?? serviceDate;
   const slot = booking?.time_slot ?? timeSlot;
   const addr = booking?.contact_address ?? address;
-  const cleaner = cleanerForBooking(bookingId);
+  const cleaner = cleanerById(booking?.preferred_cleaner) ?? cleanerForBooking(bookingId);
   const hours = slot ? slotDurationHours(slot) : null;
   const hoursLabel =
     hours == null

@@ -1,38 +1,45 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
 import { PillButton, SubpageHeader } from '../../components/ui';
 import { useI18n } from '../../i18n/LanguageContext';
 import {
-  PRIVACY_CONTACT_EMAIL,
-  PRIVACY_UPDATED,
-  privacySections,
-} from '../../legal/privacy';
+  LEGAL_CONTACT_EMAIL,
+  LEGAL_EFFECTIVE_DATE,
+  legalDocSections,
+} from '../../legal/documents';
+import type { LegalDocId } from '../../legal/documents';
 import { colors, fonts, radii, spacing } from '../../theme';
+import type { RootStackParamList } from '../../navigation/types';
+import type { TranslationKey } from '../../i18n/translations';
 
-export default function PrivacyScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<Record<string, undefined>>>();
+type Props = NativeStackScreenProps<RootStackParamList, 'LegalDoc'>;
+
+const TITLE_KEYS: Record<LegalDocId, TranslationKey> = {
+  terms: 'legal.terms',
+  cancellation: 'legal.cancellation',
+  cookies: 'legal.cookies',
+};
+
+/** Renders one lawyer-approved legal document (terms / cancellation / cookies). */
+export default function LegalDocScreen({ navigation, route }: Props) {
   const { t, language } = useI18n();
   const insets = useSafeAreaInsets();
-  const sections = privacySections(language);
+  const doc = route.params.doc;
+  const sections = legalDocSections(doc, language);
 
   return (
     <View style={styles.root}>
       <SubpageHeader
-        title={t('privacy.title')}
+        title={t(TITLE_KEYS[doc])}
         onBack={() => navigation.goBack()}
         topInset={insets.top}
       />
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.lead}>{t('privacy.lead')}</Text>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.updated}>
-          {t('privacy.updated', { date: PRIVACY_UPDATED })}
+          {t('legal.effective', { date: LEGAL_EFFECTIVE_DATE })}
         </Text>
 
         {sections.map((section) => (
@@ -43,9 +50,9 @@ export default function PrivacyScreen() {
         ))}
 
         <PillButton
-          label={t('privacy.emailCta')}
+          label={t('legal.emailCta')}
           variant="outline"
-          onPress={() => void Linking.openURL(`mailto:${PRIVACY_CONTACT_EMAIL}`)}
+          onPress={() => void Linking.openURL(`mailto:${LEGAL_CONTACT_EMAIL}`)}
         />
       </ScrollView>
     </View>
@@ -62,24 +69,10 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     gap: 12,
   },
-  lead: {
-    fontSize: 15,
-    fontFamily: fonts.medium,
-    color: colors.textSecondary,
-    lineHeight: 22,
-  },
   updated: {
     fontSize: 12,
     fontFamily: fonts.semiBold,
     color: colors.textSecondary,
-  },
-  sectionLabel: {
-    marginTop: 8,
-    fontSize: 13,
-    fontFamily: fonts.bold,
-    color: colors.textSecondary,
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
   },
   card: {
     borderRadius: radii.card,
@@ -97,10 +90,5 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     color: colors.textSecondary,
     lineHeight: 21,
-  },
-  meta: {
-    fontSize: 13,
-    fontFamily: fonts.medium,
-    color: colors.textPrimary,
   },
 });

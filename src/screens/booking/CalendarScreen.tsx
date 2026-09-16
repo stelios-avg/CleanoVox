@@ -107,7 +107,7 @@ function Chip({
 export default function CalendarScreen({ navigation, route }: Props) {
   const { t, locale } = useI18n();
   const insets = useSafeAreaInsets();
-  const { option, rooms, squareMeters, pieces, plan } = route.params;
+  const { option, rooms, squareMeters, pieces, plan, preferredCleaner } = route.params;
   const isPlan = plan != null;
   const visitsNeeded = plan ? visitsPerMonth(plan.frequency) : 1;
 
@@ -428,6 +428,7 @@ export default function CalendarScreen({ navigation, route }: Props) {
           ? allDayExtraHours(BASE_DURATION_HOURS[option])
           : extraHours,
       plan,
+      preferredCleaner,
     });
   };
 

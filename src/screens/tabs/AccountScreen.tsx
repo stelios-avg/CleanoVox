@@ -120,9 +120,13 @@ export default function AccountScreen({ navigation }: Props) {
             label={t('welcome.loginSignup')}
             onPress={() => navigation.navigate('Auth')}
           />
-          <PressableScale onPress={() => navigation.navigate('Privacy')} hitSlop={8}>
-            <Text style={styles.privacyLink}>{t('privacy.title')}</Text>
-          </PressableScale>
+          <Text style={styles.privacyLink}>
+            <Text onPress={() => navigation.navigate('LegalDoc', { doc: 'terms' })}>
+              {t('legal.terms')}
+            </Text>
+            {'  ·  '}
+            <Text onPress={() => navigation.navigate('Privacy')}>{t('privacy.title')}</Text>
+          </Text>
 
           <Text style={styles.sectionLabel}>{t('account.whyJoin')}</Text>
           <View style={styles.highlightList}>
@@ -206,10 +210,29 @@ export default function AccountScreen({ navigation }: Props) {
         </View>
         <View style={styles.menuDivider} />
         <MenuRow
+          icon="document-text-outline"
+          label={t('legal.terms')}
+          sublabel={t('legal.menuSub')}
+          onPress={() => navigation.navigate('LegalDoc', { doc: 'terms' })}
+        />
+        <View style={styles.menuDivider} />
+        <MenuRow
+          icon="calendar-clear-outline"
+          label={t('legal.cancellation')}
+          onPress={() => navigation.navigate('LegalDoc', { doc: 'cancellation' })}
+        />
+        <View style={styles.menuDivider} />
+        <MenuRow
           icon="shield-checkmark-outline"
           label={t('privacy.title')}
           sublabel={t('privacy.menuSub')}
           onPress={() => navigation.navigate('Privacy')}
+        />
+        <View style={styles.menuDivider} />
+        <MenuRow
+          icon="disc-outline"
+          label={t('legal.cookies')}
+          onPress={() => navigation.navigate('LegalDoc', { doc: 'cookies' })}
         />
         <View style={styles.menuDivider} />
         <MenuRow

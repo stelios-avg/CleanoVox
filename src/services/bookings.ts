@@ -105,6 +105,7 @@ export async function createBooking(input: CreateBookingInput): Promise<Booking 
     status: input.status ?? 'paid',
     payment_intent_id: input.paymentIntentId ?? null,
     push_token: pushToken,
+    preferred_cleaner: input.preferredCleaner ?? null,
   }));
 
   if (user) {

@@ -17,6 +17,14 @@ const CATEGORY_LABEL: Record<ServiceCategory, string> = {
   ironing: 'Σιδέρωμα',
 };
 
+/** Ids match TEAM_CLEANERS in the mobile app (src/constants/team.ts). */
+const CLEANER_NAME: Record<string, string> = {
+  eleni: 'Ελένη Παπαδοπούλου',
+  maria: 'Μαρία Νικολάου',
+  anna: 'Άννα Χριστοδούλου',
+  sofia: 'Σοφία Ιωάννου',
+};
+
 function euros(cents: number) {
   return `€${(cents / 100).toFixed(2)}`;
 }
@@ -341,6 +349,11 @@ export default async function BookingsPage({
                   <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600">
                     {CATEGORY_LABEL[b.category]}
                   </span>
+                  {b.preferred_cleaner ? (
+                    <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">
+                      Προτίμηση: {CLEANER_NAME[b.preferred_cleaner] ?? b.preferred_cleaner}
+                    </span>
+                  ) : null}
                   {b.square_meters ? (
                     <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600">
                       {b.option === 'Ironing'

@@ -1,8 +1,8 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Heading, Subtitle } from '../../components/ui';
 import { PressableScale } from '../../components/PressableScale';
 import { SHOP_CATEGORIES } from '../../constants/shop';
@@ -31,9 +31,16 @@ export default function MarketplaceScreen() {
               onPress={() => navigation.navigate('ShopCategory', { category: cat.slug })}
               style={styles.card}
             >
-              <View style={styles.cardIcon}>
-                <Ionicons name={cat.icon} size={24} color={colors.accent} />
-              </View>
+              <Image
+                source={cat.photo}
+                style={styles.photo}
+                resizeMode={cat.photoFit}
+              />
+              <LinearGradient
+                colors={['transparent', 'rgba(8,16,16,0.15)', 'rgba(8,16,16,0.88)']}
+                locations={[0.35, 0.62, 1]}
+                style={StyleSheet.absoluteFill}
+              />
               <Text style={styles.cardLabel} numberOfLines={2}>
                 {t(`shopCat.${cat.slug}`)}
               </Text>
@@ -76,26 +83,32 @@ const styles = StyleSheet.create({
     rowGap: 12,
   },
   card: {
-    width: '48%',
-    minHeight: 132,
+    width: '48.2%',
+    height: 176,
     borderRadius: radii.card,
-    backgroundColor: colors.surface,
-    padding: 18,
-    gap: 14,
+    backgroundColor: '#ECEFEF',
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
   },
-  cardIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
+  photo: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
   },
   cardLabel: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: fonts.bold,
-    color: colors.textPrimary,
-    lineHeight: 20,
+    color: colors.textOnDark,
+    lineHeight: 18,
+    paddingHorizontal: 12,
+    paddingBottom: 14,
+    textShadowColor: 'rgba(0,0,0,0.35)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   cartBar: {
     position: 'absolute',

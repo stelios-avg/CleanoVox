@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
 import { useStripe } from '@stripe/stripe-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Heading, PillButton, Subtitle } from '../../components/ui';
 import {
   CURRENCY_CODE,
@@ -16,12 +19,35 @@ import { useI18n } from '../../i18n/LanguageContext';
 import { createBooking } from '../../services/bookings';
 import { createPaymentIntent } from '../../services/payments';
 import { colors, fonts, radii, spacing } from '../../theme';
-import type { BookingStackParamList } from '../../navigation/types';
+import type { BookingStackParamList, RootStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<BookingStackParamList, 'Payment'>;
 
+/** One tappable consent row: checkbox + label. Required before paying. */
+function ConsentRow({
+  checked,
+  onToggle,
+  label,
+}: {
+  checked: boolean;
+  onToggle: () => void;
+  label: string;
+}) {
+  return (
+    <Pressable style={styles.consentRow} onPress={onToggle} hitSlop={6}>
+      <Ionicons
+        name={checked ? 'checkbox' : 'square-outline'}
+        size={22}
+        color={checked ? colors.accent : colors.textSecondary}
+      />
+      <Text style={styles.consentText}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export default function PaymentScreen({ navigation, route }: Props) {
   const { t } = useI18n();
+  const rootNavigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const amount = bookingGrandTotalCents(
     route.params.option,
@@ -35,6 +61,9 @@ export default function PaymentScreen({ navigation, route }: Props) {
   );
 
   const [processing, setProcessing] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [withdrawalAccepted, setWithdrawalAccepted] = useState(false);
+  const consentsGiven = termsAccepted && withdrawalAccepted;
   const stripeReady = STRIPE_PUBLISHABLE_KEY.startsWith('pk_');
 
   const saveAndConfirm = async (paymentIntentId?: string | null) => {
@@ -132,17 +161,45 @@ export default function PaymentScreen({ navigation, route }: Props) {
       </View>
 
       <View style={styles.footer}>
+        <View style={styles.consentCard}>
+          <ConsentRow
+            checked={termsAccepted}
+            onToggle={() => setTermsAccepted((v) => !v)}
+            label={t('payment.acceptTerms')}
+          />
+          <ConsentRow
+            checked={withdrawalAccepted}
+            onToggle={() => setWithdrawalAccepted((v) => !v)}
+            label={t('payment.acceptWithdrawal')}
+          />
+          <Text style={styles.consentLinks}>
+            <Text
+              style={styles.consentLink}
+              onPress={() => rootNavigation.navigate('LegalDoc', { doc: 'terms' })}
+            >
+              {t('legal.terms')}
+            </Text>
+            {'  ·  '}
+            <Text
+              style={styles.consentLink}
+              onPress={() => rootNavigation.navigate('LegalDoc', { doc: 'cancellation' })}
+            >
+              {t('legal.cancellation')}
+            </Text>
+          </Text>
+          <Text style={styles.consentNote}>{t('payment.cancellationNote')}</Text>
+        </View>
         <PillButton
           label={processing ? t('auth.pleaseWait') : t('payment.pay')}
           onPress={pay}
-          disabled={processing}
+          disabled={processing || !consentsGiven}
         />
         {__DEV__ ? (
           <PillButton
             label={t('payment.simulate')}
             variant="outline"
             onPress={simulatePay}
-            disabled={processing}
+            disabled={processing || !consentsGiven}
           />
         ) : null}
       </View>
@@ -182,5 +239,36 @@ const styles = StyleSheet.create({
   footer: {
     paddingBottom: 10,
     gap: 10,
+  },
+  consentCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.card,
+    padding: 14,
+    gap: 10,
+  },
+  consentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  consentText: {
+    flex: 1,
+    fontSize: 12.5,
+    fontFamily: fonts.medium,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+  consentLinks: {
+    fontSize: 12.5,
+    fontFamily: fonts.semiBold,
+  },
+  consentLink: {
+    color: colors.accent,
+  },
+  consentNote: {
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    color: colors.textSecondary,
+    lineHeight: 17,
   },
 });

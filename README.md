@@ -9,7 +9,7 @@ Mobile app for a cleaning service business, built with React Native + Expo (mana
 | Frontend   | React Native + Expo (managed)                                 | Phase 1 (done)    |
 | Navigation | React Navigation (native stack + bottom tabs)                 | Phase 1 (done)    |
 | Backend    | Supabase (database + auth)                                    | Phase 2           |
-| Payments   | Stripe React Native (one-time) + Stripe Billing (membership)  | Phase 3           |
+| Payments   | Stripe React Native (one-time payments)                       | Phase 3           |
 | Styling    | Tailwind CSS via NativeWind                                   | Later phase       |
 
 ## Running the app
@@ -28,7 +28,7 @@ NavigationContainer
     ├── MainTabs (bottom tabs)
     │   ├── Home                 # can launch BookingFlow
     │   ├── Marketplace          # e-commerce (later phase)
-    │   └── Account              # profile, orders, Membership Card €14.99/mo
+    │   └── Account              # profile, orders, monthly cleaning plans
     ├── BookingFlow (native stack)
     │   ├── Calendar             # step 1: pick a day
     │   ├── TimeSlots            # step 2: pick a 1-hour slot

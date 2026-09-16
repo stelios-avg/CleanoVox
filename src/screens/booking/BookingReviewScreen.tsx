@@ -16,7 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SubpageHeader } from '../../components/ui';
 import { PressableScale } from '../../components/PressableScale';
-import { cleanerForBooking } from '../../constants/team';
+import { cleanerById, cleanerForBooking } from '../../constants/team';
 import { useAuth } from '../../context/AuthContext';
 import { useI18n } from '../../i18n/LanguageContext';
 import { asBookingOption, type RootStackParamList } from '../../navigation/types';
@@ -38,7 +38,8 @@ export default function BookingReviewScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAuth();
   const { bookingId } = route.params;
-  const cleaner = cleanerForBooking(bookingId);
+  const [preferredCleanerId, setPreferredCleanerId] = useState<string | null>(null);
+  const cleaner = cleanerById(preferredCleanerId) ?? cleanerForBooking(bookingId);
 
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -63,6 +64,7 @@ export default function BookingReviewScreen({ navigation, route }: Props) {
         }
         if (booking) {
           setOption(booking.option);
+          setPreferredCleanerId(booking.preferred_cleaner);
         }
         if (review) {
           setExisting(review);

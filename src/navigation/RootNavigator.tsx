@@ -4,6 +4,7 @@ import WelcomeScreen from '../screens/WelcomeScreen';
 import MyBookingsScreen from '../screens/account/MyBookingsScreen';
 import ProfileScreen from '../screens/account/ProfileScreen';
 import PrivacyScreen from '../screens/account/PrivacyScreen';
+import LegalDocScreen from '../screens/account/LegalDocScreen';
 import DeleteAccountScreen from '../screens/account/DeleteAccountScreen';
 import ShopCategoryScreen from '../screens/shop/ShopCategoryScreen';
 import CartScreen from '../screens/shop/CartScreen';
@@ -49,6 +50,7 @@ export default function RootNavigator() {
       <Stack.Screen name="MyBookings" component={MyBookingsScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="Privacy" component={PrivacyScreen} />
+      <Stack.Screen name="LegalDoc" component={LegalDocScreen} />
       <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
       <Stack.Screen name="ShopCategory" component={ShopCategoryScreen} />
       <Stack.Screen name="ShopCart" component={CartScreen} />

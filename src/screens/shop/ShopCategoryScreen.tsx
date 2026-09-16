@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   StyleSheet,
   Text,
   View,
@@ -13,6 +14,7 @@ import { ProductThumb } from '../../components/ProductThumb';
 import { SubpageHeader } from '../../components/ui';
 import { PressableScale } from '../../components/PressableScale';
 import { formatEuros } from '../../constants/payments';
+import { SHOP_CATEGORIES } from '../../constants/shop';
 import { useCart } from '../../context/CartContext';
 import { useI18n } from '../../i18n/LanguageContext';
 import { listProductsByCategory, isOutOfStock, maxPurchasable } from '../../services/shop';
@@ -123,6 +125,8 @@ export default function ShopCategoryScreen({ navigation, route }: Props) {
     };
   }, [category]);
 
+  const shopCategory = SHOP_CATEGORIES.find((item) => item.slug === category);
+
   return (
     <View style={styles.root}>
       <SubpageHeader
@@ -143,6 +147,15 @@ export default function ShopCategoryScreen({ navigation, route }: Props) {
           keyExtractor={(p) => p.id}
           renderItem={({ item }) => <ProductRow product={item} />}
           contentContainerStyle={styles.list}
+          ListHeaderComponent={
+            shopCategory ? (
+              <Image
+                source={shopCategory.photo}
+                style={styles.hero}
+                resizeMode={shopCategory.photoFit}
+              />
+            ) : null
+          }
           ItemSeparatorComponent={() => <View style={styles.separator} />}
         />
       )}
@@ -171,6 +184,13 @@ const styles = StyleSheet.create({
   list: {
     padding: spacing.screen,
     paddingBottom: 110,
+  },
+  hero: {
+    height: 148,
+    width: '100%',
+    borderRadius: radii.card,
+    backgroundColor: '#ECEFEF',
+    marginBottom: 16,
   },
   separator: {
     height: 1,

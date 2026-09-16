@@ -18,6 +18,7 @@ import {
   suppliesTotalCents,
 } from '../../constants/payments';
 import { monthlyPlanPriceCents } from '../../constants/plans';
+import { cleanerById } from '../../constants/team';
 import { getMyProfile } from '../../services/profile';
 import { completeContactFrom } from '../../utils/contact';
 import { colors, fonts, radii, spacing } from '../../theme';
@@ -77,6 +78,7 @@ export default function BookingSummaryScreen({ navigation, route }: Props) {
     route.params;
   const visitDates = dates && dates.length > 0 ? dates : [date];
   const variedTimes = !!timeSlots && new Set(timeSlots).size > 1;
+  const chosenCleaner = cleanerById(route.params.preferredCleaner);
   const cleaningAmount = plan
     ? monthlyPlanPriceCents(plan.frequency, plan.visitHours)
     : bookingTotalCents(option, extraHours, squareMeters, rooms, pieces);
@@ -198,6 +200,13 @@ export default function BookingSummaryScreen({ navigation, route }: Props) {
                   : timeSlot
             }
           />
+          {chosenCleaner ? (
+            <SummaryRow
+              icon="person-outline"
+              label={t('summary.cleaner')}
+              value={language === 'el' ? chosenCleaner.nameEl : chosenCleaner.nameEn}
+            />
+          ) : null}
           {option === 'Ironing' ? (
             <SummaryRow
               icon="shirt-outline"

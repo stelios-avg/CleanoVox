@@ -1,6 +1,7 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { PlanBooking } from '../constants/plans';
 import type { ShopCategorySlug } from '../constants/shop';
+import type { LegalDocId } from '../legal/documents';
 
 // ---------- Domain types used by the booking flow ----------
 
@@ -113,6 +114,8 @@ export type BookingSelection = {
    * a different time per visit; otherwise every visit uses `timeSlot`.
    */
   timeSlots?: string[];
+  /** Preferred cleaner id from `TEAM_CLEANERS`, chosen on the quote screen. */
+  preferredCleaner?: string;
   /** Add-on services chosen on the summary (ironing, hoover, oven, fireplace). */
   extras?: BookingExtraId[];
   /** Set on the summary step: `[]` means continue without supplies. */
@@ -141,6 +144,7 @@ export type BookingStackParamList = {
     squareMeters: number;
     pieces?: number;
     plan?: PlanBooking;
+    preferredCleaner?: string;
   };
   BookingSummary: BookingSelection;
   BookingSupplies: BookingSelection;
@@ -153,6 +157,7 @@ export type AuthStackParamList = {
   Login: undefined;
   SignUp: undefined;
   Privacy: undefined;
+  LegalDoc: { doc: LegalDocId };
 };
 
 export type MainTabParamList = {
@@ -170,6 +175,7 @@ export type RootStackParamList = {
   MyBookings: undefined;
   Profile: undefined;
   Privacy: undefined;
+  LegalDoc: { doc: LegalDocId };
   DeleteAccount: undefined;
   ShopCategory: { category: ShopCategorySlug };
   ShopCart: undefined;
