@@ -7,6 +7,7 @@ import {
   completedPushCopy,
   isWithinArrivalReminderWindow,
   normalizeArrivalTime,
+  rejectedPushCopy,
 } from '@/lib/arrival';
 import { requireAdmin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
@@ -182,8 +183,38 @@ export async function rejectBooking(bookingId: string) {
     return { error: payload.error };
   }
 
+  const refunded = Boolean(payload?.refunded);
+  const { data: booking } = await supabase
+    .from('bookings')
+    .select('id, push_token, user_id')
+    .eq('id', bookingId)
+    .maybeSingle();
+
+  let notified = false;
+  if (booking) {
+    const token = await pushTokenForBooking(supabase, booking);
+    if (token) {
+      const copy = rejectedPushCopy(refunded);
+      try {
+        await sendExpoPush(token, copy.title, copy.body, {
+          bookingId: booking.id,
+          type: 'booking_rejected',
+        });
+        notified = true;
+      } catch (e) {
+        revalidatePath('/bookings');
+        return {
+          ok: true as const,
+          refunded,
+          notified: false,
+          warning: (e as Error).message,
+        };
+      }
+    }
+  }
+
   revalidatePath('/bookings');
-  return { ok: true as const, refunded: Boolean(payload?.refunded) };
+  return { ok: true as const, refunded, notified };
 }
 
 export async function deleteBooking(bookingId: string) {

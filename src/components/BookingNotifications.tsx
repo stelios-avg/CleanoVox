@@ -13,6 +13,7 @@ import {
   parseNoticeData,
   presentArrivalNotice,
   presentCompletedNotice,
+  presentRejectedNotice,
   registerPushNotifications,
   remotePushWorks,
   savePushTokenToProfile,
@@ -42,7 +43,7 @@ function addressLine(
   return trimmed ? t('notify.addressLine', { address: trimmed }) : '';
 }
 
-/** Registers for notifications and shows a local banner when an admin accepts or completes a visit. */
+/** Registers for notifications and shows a local banner when an admin accepts, rejects, or completes a visit. */
 export function BookingNotifications() {
   const { session } = useAuth();
   const { t, locale } = useI18n();
@@ -184,6 +185,18 @@ export function BookingNotifications() {
                 address: next.contact_address,
                 title: t('notify.reminderTitle'),
                 body: t('notify.reminderBody', { time: next.arrival_time, addressLine: line }),
+              });
+            }
+            return;
+          }
+
+          if (next.status === 'rejected') {
+            seen.current.add(key);
+            if (useLocalBackup) {
+              void presentRejectedNotice({
+                bookingId: next.id,
+                title: t('notify.rejectedTitle'),
+                body: t('notify.rejectedBody'),
               });
             }
             return;

@@ -10,14 +10,13 @@ export type ContactDetails = {
   longitude?: number | null;
 };
 
-function validEmailOrEmpty(email: string): boolean {
-  return email.length === 0 || EMAIL_RE.test(email);
+function validEmail(email: string): boolean {
+  return EMAIL_RE.test(email);
 }
 
 /**
- * Returns a normalized contact object when name, phone, and address are
- * present. Email is optional. Used to skip the contact-details step for
- * returning customers.
+ * Returns a normalized contact object when name, email, phone, and address
+ * are present. Used to skip the contact-details step for returning customers.
  */
 export function completeContactFrom(
   name: string | null | undefined,
@@ -32,7 +31,7 @@ export function completeContactFrom(
   const p = (phone ?? '').trim();
   const a = (address ?? '').trim();
 
-  if (n.length >= 2 && PHONE_RE.test(p) && a.length >= 5 && validEmailOrEmpty(e)) {
+  if (n.length >= 2 && validEmail(e) && PHONE_RE.test(p) && a.length >= 5) {
     return { name: n, email: e, phone: p, address: a, latitude, longitude };
   }
   return null;

@@ -21,9 +21,8 @@ import type { BookingStackParamList } from '../../navigation/types';
 type Props = NativeStackScreenProps<BookingStackParamList, 'ContactDetails'>;
 
 /**
- * Collects name, phone, and address before payment. Guests can continue
- * without an account. Signed-in customers get fields prefilled from the
- * profile and saved back so the next booking can skip this step.
+ * Collects name, email, phone, and address before payment. Email is required
+ * so Stripe can send the receipt. Guests can continue without an account.
  */
 export default function ContactDetailsScreen({ navigation, route }: Props) {
   const { t } = useI18n();
@@ -73,7 +72,7 @@ export default function ContactDetailsScreen({ navigation, route }: Props) {
 
   const nameValid = name.trim().length >= 2;
   const emailTrimmed = email.trim();
-  const emailValid = emailTrimmed.length === 0 || EMAIL_RE.test(emailTrimmed);
+  const emailValid = EMAIL_RE.test(emailTrimmed);
   const phoneValid = PHONE_RE.test(phone.trim());
   const addressValid = address.trim().length >= 5;
   const allValid = nameValid && emailValid && phoneValid && addressValid;
@@ -141,6 +140,16 @@ export default function ContactDetailsScreen({ navigation, route }: Props) {
             error={touched && !nameValid ? t('contact.nameError') : undefined}
           />
           <FormInput
+            label={t('contact.email')}
+            value={email}
+            onChangeText={setEmail}
+            placeholder={t('contact.emailPlaceholder')}
+            keyboardType="email-address"
+            autoComplete="email"
+            textContentType="emailAddress"
+            error={touched && !emailValid ? t('contact.emailError') : undefined}
+          />
+          <FormInput
             label={t('contact.phone')}
             value={phone}
             onChangeText={setPhone}
@@ -165,14 +174,6 @@ export default function ContactDetailsScreen({ navigation, route }: Props) {
               setLatitude(lat);
               setLongitude(lng);
             }}
-          />
-          <FormInput
-            label={t('contact.emailOptional')}
-            value={email}
-            onChangeText={setEmail}
-            placeholder={t('contact.emailPlaceholder')}
-            keyboardType="email-address"
-            error={touched && !emailValid ? t('contact.emailError') : undefined}
           />
         </View>
 

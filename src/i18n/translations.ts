@@ -249,14 +249,14 @@ const el = {
   'contact.saveHint':
     'Θα αποθηκευτούν στο προφίλ σου — στην επόμενη κράτηση δεν θα στα ξαναζητήσουμε.',
   'contact.guestHint':
-    'Δεν χρειάζεται λογαριασμός. Συμπλήρωσε όνομα, τηλέφωνο και διεύθυνση για να συνεχίσεις.',
+    'Δεν χρειάζεται λογαριασμός. Βάλε όνομα, email, τηλέφωνο και διεύθυνση — η απόδειξη πληρωμής θα έρθει στο email.',
   'contact.name': 'Όνομα',
   'contact.namePlaceholder': 'π.χ. Μαρία Παπαδοπούλου',
   'contact.nameError': 'Συμπλήρωσε το όνομά σου',
   'contact.email': 'Email',
-  'contact.emailOptional': 'Email (προαιρετικό)',
+  'contact.emailOptional': 'Email',
   'contact.emailPlaceholder': 'name@example.com',
-  'contact.emailError': 'Συμπλήρωσε ένα έγκυρο email',
+  'contact.emailError': 'Συμπλήρωσε ένα έγκυρο email για την απόδειξη',
   'contact.phone': 'Τηλέφωνο',
   'contact.phonePlaceholder': 'π.χ. 99 123456',
   'contact.phoneError': 'Συμπλήρωσε ένα έγκυρο τηλέφωνο',
@@ -295,7 +295,7 @@ const el = {
   'confirm.paid': 'Η πληρωμή ολοκληρώθηκε!',
   'confirm.pendingTitle': 'Αναμένει έγκριση',
   'confirm.pendingBody':
-    'Η ομάδα θα επιβεβαιώσει την επίσκεψη. Θα το δεις στο ιστορικό σου μόλις εγκριθεί — όχι αμέσως στο δρόμο.',
+    'Η ομάδα θα επιβεβαιώσει την επίσκεψη. Θα το δεις στο ιστορικό σου μόλις εγκριθεί.',
   'confirm.when': 'Προγραμματισμένη επίσκεψη',
   'confirm.bookingLabel': 'Η κράτησή σου',
   'confirm.home': 'Πίσω στην αρχική',
@@ -374,6 +374,9 @@ const el = {
     'Άφιξη στις {time}.{addressLine} Βεβαιώσου ότι βρίσκει το σπίτι και άνοιξέ της την πόρτα.',
   'notify.completedTitle': 'Η κράτησή σου ολοκληρώθηκε!',
   'notify.completedBody': 'Συγχαρητήρια — αξιολόγησε την επίσκεψη και άφησε tip αν θέλεις.',
+  'notify.rejectedTitle': 'Η κράτησή σου απορρίφθηκε',
+  'notify.rejectedBody':
+    'Δεν μπορέσαμε να επιβεβαιώσουμε την επίσκεψη. Αν πλήρωσες, το ποσό επιστρέφεται στην κάρτα σου.',
   'completed.title': 'Η κράτησή σου ολοκληρώθηκε!',
   'completed.address': 'Διεύθυνση',
   'completed.hours': '{n} ώρες',
@@ -726,14 +729,14 @@ const en: Record<TranslationKey, string> = {
   'contact.saveHint':
     "They'll be saved to your profile — we won't ask for them again on your next booking.",
   'contact.guestHint':
-    'No account needed. Enter your name, phone, and address to continue.',
+    'No account needed. Enter your name, email, phone and address — the payment receipt is sent to this email.',
   'contact.name': 'Name',
   'contact.namePlaceholder': 'e.g. Maria Papadopoulou',
   'contact.nameError': 'Enter your name',
   'contact.email': 'Email',
-  'contact.emailOptional': 'Email (optional)',
+  'contact.emailOptional': 'Email',
   'contact.emailPlaceholder': 'name@example.com',
-  'contact.emailError': 'Enter a valid email',
+  'contact.emailError': 'Enter a valid email for the receipt',
   'contact.phone': 'Phone',
   'contact.phonePlaceholder': 'e.g. 99 123456',
   'contact.phoneError': 'Enter a valid phone number',
@@ -770,7 +773,7 @@ const en: Record<TranslationKey, string> = {
   'confirm.paid': 'Payment complete!',
   'confirm.pendingTitle': 'Waiting for approval',
   'confirm.pendingBody':
-    'The team will confirm the visit. You’ll see the update in your bookings once it’s accepted — nobody is on the way yet.',
+    'The team will confirm the visit. You’ll see the update in your bookings once it’s accepted.',
   'confirm.when': 'Scheduled visit',
   'confirm.bookingLabel': 'Your booking',
   'confirm.home': 'Back to home',
@@ -846,6 +849,9 @@ const en: Record<TranslationKey, string> = {
     'Arrival at {time}.{addressLine} Make sure they can find the house and open the door.',
   'notify.completedTitle': 'Your booking is complete!',
   'notify.completedBody': 'Congrats — rate the visit and leave a tip if you like.',
+  'notify.rejectedTitle': 'Your booking was declined',
+  'notify.rejectedBody':
+    'We couldn’t confirm the visit. If you paid, the amount will be refunded to your card.',
   'completed.title': 'Your booking is complete!',
   'completed.address': 'Address',
   'completed.hours': '{n} hours',

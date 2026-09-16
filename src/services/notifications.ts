@@ -234,6 +234,27 @@ export async function presentArrivalNotice(input: {
   });
 }
 
+export async function presentRejectedNotice(input: {
+  bookingId: string;
+  title: string;
+  body: string;
+}): Promise<void> {
+  await ensureAndroidChannel();
+  await Notifications.scheduleNotificationAsync({
+    identifier: `booking-rejected-${input.bookingId}`,
+    content: {
+      title: input.title,
+      body: input.body,
+      sound: 'default',
+      data: {
+        bookingId: input.bookingId,
+        type: 'booking_rejected',
+      },
+    },
+    trigger: null,
+  });
+}
+
 export async function presentCompletedNotice(input: {
   bookingId: string;
   title: string;

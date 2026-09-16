@@ -125,7 +125,7 @@ export type BookingSelection = {
 /** Mandatory customer details collected before payment. */
 export type ContactDetails = {
   name: string;
-  /** Optional for guest checkout. */
+  /** Receipt email — required so Stripe can send the payment receipt. */
   email: string;
   phone: string;
   address: string;

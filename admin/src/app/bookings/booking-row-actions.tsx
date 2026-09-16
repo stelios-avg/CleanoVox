@@ -50,6 +50,11 @@ export function BookingRowActions({
       if ('refunded' in result && result.refunded) {
         setInfo('Η κράτηση απορρίφθηκε και τα χρήματα επιστράφηκαν μέσω Stripe.');
       }
+      if ('notified' in result && !result.notified) {
+        setError(
+          'Η κράτηση απορρίφθηκε. Ο πελάτης μπορεί να μην πάρει ειδοποίηση αν δεν έχει ανοιχτό το app.'
+        );
+      }
     });
   };
 
@@ -138,7 +143,7 @@ export function BookingRowActions({
             onClick={reject}
             className="rounded-full bg-red-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-red-700 active:scale-[0.97] disabled:opacity-50"
           >
-            Απόρριψη & επιστροφή
+            Απόρριψη, επιστροφή & ειδοποίηση
           </button>
         ) : null}
         <button
