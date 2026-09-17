@@ -9,6 +9,8 @@ export type CreateBookingInput = BookingSelection & {
   contact: ContactDetails;
   status?: BookingStatus;
   paymentIntentId?: string | null;
+  /** Storage paths uploaded before insert — not the local camera URIs. */
+  photoPaths?: string[];
 };
 
 /** Persist a booking. Signed-in customers are linked; guests stay anonymous. */
@@ -106,6 +108,8 @@ export async function createBooking(input: CreateBookingInput): Promise<Booking 
     payment_intent_id: input.paymentIntentId ?? null,
     push_token: pushToken,
     preferred_cleaner: input.preferredCleaner ?? null,
+    customer_notes: input.notes?.trim() || null,
+    customer_photos: (input.photoPaths ?? []).slice(0, 4),
   }));
 
   if (user) {

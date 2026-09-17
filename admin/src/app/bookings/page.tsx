@@ -62,6 +62,48 @@ function BookingReviewNote({
   );
 }
 
+function CustomerInstructions({
+  notes,
+  photos,
+}: {
+  notes: string | null;
+  photos: { path: string; url: string }[];
+}) {
+  if (!notes && photos.length === 0) {
+    return null;
+  }
+  return (
+    <div className="mt-3 rounded-2xl bg-violet-50 px-3 py-2.5">
+      <p className="text-[11px] font-bold tracking-wide text-violet-800">
+        ΣΗΜΕΙΩΣΕΙΣ ΠΕΛΑΤΗ
+      </p>
+      {notes ? (
+        <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-ink">{notes}</p>
+      ) : null}
+      {photos.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {photos.map((photo) => (
+            <a
+              key={photo.path}
+              href={photo.url}
+              target="_blank"
+              rel="noreferrer"
+              className="block overflow-hidden rounded-xl ring-1 ring-violet-200"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={photo.url}
+                alt="Φωτογραφία πελάτη"
+                className="h-24 w-24 object-cover"
+              />
+            </a>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function formatDate(isoDate: string) {
   return new Date(isoDate).toLocaleDateString('el-GR', {
     weekday: 'short',
@@ -87,7 +129,8 @@ function matchesQuery(booking: Booking, q: string) {
     (booking.contact_email ?? '').toLowerCase().includes(q) ||
     booking.contact_phone.toLowerCase().includes(q) ||
     booking.contact_address.toLowerCase().includes(q) ||
-    booking.option.toLowerCase().includes(q)
+    booking.option.toLowerCase().includes(q) ||
+    (booking.customer_notes ?? '').toLowerCase().includes(q)
   );
 }
 
@@ -122,6 +165,21 @@ export default async function BookingsPage({
   );
 
   const all = bookings ?? [];
+
+  const photoPaths = [
+    ...new Set(all.flatMap((b) => (Array.isArray(b.customer_photos) ? b.customer_photos : []))),
+  ];
+  const photoUrlByPath = new Map<string, string>();
+  if (photoPaths.length > 0) {
+    const { data: signed } = await supabase.storage
+      .from('booking-photos')
+      .createSignedUrls(photoPaths, 60 * 60 * 12);
+    for (const item of signed ?? []) {
+      if (item.path && item.signedUrl) {
+        photoUrlByPath.set(item.path, item.signedUrl);
+      }
+    }
+  }
 
   const counts = all.reduce(
     (acc, b) => {
@@ -395,6 +453,18 @@ export default async function BookingsPage({
                       ))}
                     </ul>
                   </div>
+                ) : null}
+
+                {!deleted ? (
+                  <CustomerInstructions
+                    notes={b.customer_notes}
+                    photos={(Array.isArray(b.customer_photos) ? b.customer_photos : [])
+                      .map((path) => {
+                        const url = photoUrlByPath.get(path);
+                        return url ? { path, url } : null;
+                      })
+                      .filter((item): item is { path: string; url: string } => item !== null)}
+                  />
                 ) : null}
 
                 <BookingReviewNote

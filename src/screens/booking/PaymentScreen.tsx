@@ -17,6 +17,7 @@ import {
 } from '../../constants/payments';
 import { useI18n } from '../../i18n/LanguageContext';
 import { createBooking } from '../../services/bookings';
+import { uploadBookingPhotos } from '../../services/bookingPhotos';
 import { createPaymentIntent } from '../../services/payments';
 import { colors, fonts, radii, spacing } from '../../theme';
 import type { BookingStackParamList, RootStackParamList } from '../../navigation/types';
@@ -67,8 +68,10 @@ export default function PaymentScreen({ navigation, route }: Props) {
   const stripeReady = STRIPE_PUBLISHABLE_KEY.startsWith('pk_');
 
   const saveAndConfirm = async (paymentIntentId?: string | null) => {
+    const photoPaths = await uploadBookingPhotos(route.params.photos ?? []);
     await createBooking({
       ...route.params,
+      photoPaths,
       status: 'paid',
       paymentIntentId: paymentIntentId ?? null,
     });

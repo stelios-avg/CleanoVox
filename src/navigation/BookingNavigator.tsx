@@ -14,7 +14,7 @@ import type { BookingStackParamList } from './types';
 const Stack = createNativeStackNavigator<BookingStackParamList>();
 
 /**
- * Sequential booking flow: Quote -> Calendar -> Summary (optional supplies)
+ * Sequential booking flow: Quote -> Calendar -> Summary (notes, photos, optional supplies)
  * -> Contact Details -> Payment.
  */
 export default function BookingNavigator() {

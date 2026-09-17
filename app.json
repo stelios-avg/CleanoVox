@@ -48,6 +48,14 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Το Cleanovox χρησιμοποιεί τις φωτογραφίες σου για να δει η ομάδα τον χώρο πριν τον καθαρισμό.",
+          "cameraPermission": "Το Cleanovox χρησιμοποιεί την κάμερα για να στείλεις φωτογραφίες του χώρου στην ομάδα.",
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/logo.png",

@@ -67,6 +67,17 @@ Deno.serve(async (req) => {
 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Nicosia' });
 
+  const { data: photoRows } = await admin
+    .from('bookings')
+    .select('customer_photos')
+    .eq('user_id', user.id);
+  const photoPaths = [
+    ...new Set((photoRows ?? []).flatMap((row) => row.customer_photos ?? [])),
+  ];
+  if (photoPaths.length > 0) {
+    await admin.storage.from('booking-photos').remove(photoPaths);
+  }
+
   const { error: cancelBookingsError } = await admin
     .from('bookings')
     .update({ status: 'cancelled' })
@@ -87,6 +98,8 @@ Deno.serve(async (req) => {
       contact_lat: null,
       contact_lng: null,
       push_token: null,
+      customer_notes: null,
+      customer_photos: [],
       user_id: null,
     })
     .eq('user_id', user.id);

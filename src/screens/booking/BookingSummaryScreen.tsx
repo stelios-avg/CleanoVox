@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Heading, PillButton, Subtitle } from '../../components/ui';
+import { BookingNotesFields } from '../../components/BookingNotesFields';
 import { PressableScale } from '../../components/PressableScale';
 import { useAuth } from '../../context/AuthContext';
 import { useI18n } from '../../i18n/LanguageContext';
@@ -71,6 +72,8 @@ export default function BookingSummaryScreen({ navigation, route }: Props) {
   const { isAuthenticated, session } = useAuth();
   const { t, locale, language } = useI18n();
   const [checking, setChecking] = useState(false);
+  const [notes, setNotes] = useState(route.params.notes ?? '');
+  const [photos, setPhotos] = useState<string[]>(() => route.params.photos ?? []);
   const [extraIds, setExtraIds] = useState<BookingExtraId[]>(
     () => route.params.extras ?? []
   );
@@ -96,14 +99,16 @@ export default function BookingSummaryScreen({ navigation, route }: Props) {
   );
   const choseSupplies = supplies !== undefined;
 
-  const withExtras = (nextSupplies: BookingSupply[]): BookingSelection => ({
+  const selection = (nextSupplies: BookingSupply[]): BookingSelection => ({
     ...route.params,
     supplies: nextSupplies,
     extras: allowedExtras(option, extraIds),
+    notes: notes.trim() || undefined,
+    photos: photos.length > 0 ? photos : undefined,
   });
 
   const goNext = async (nextSupplies: BookingSupply[]) => {
-    const params = withExtras(nextSupplies);
+    const params = selection(nextSupplies);
     if (!isAuthenticated) {
       navigation.navigate('ContactDetails', params);
       return;
@@ -154,7 +159,11 @@ export default function BookingSummaryScreen({ navigation, route }: Props) {
 
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <Heading>{t('summary.title')}</Heading>
         <Subtitle>{t('summary.subtitle')}</Subtitle>
 
@@ -309,6 +318,13 @@ export default function BookingSummaryScreen({ navigation, route }: Props) {
           </View>
         </View>
 
+        <BookingNotesFields
+          notes={notes}
+          photos={photos}
+          onNotes={setNotes}
+          onPhotos={setPhotos}
+        />
+
         <View style={styles.totalCard}>
           <Text style={styles.totalLabel}>{t('summary.total')}</Text>
           <Text style={styles.totalValue}>{formatEuros(amount)}</Text>
@@ -326,12 +342,7 @@ export default function BookingSummaryScreen({ navigation, route }: Props) {
             <PillButton
               label={t('summary.changeSupplies')}
               variant="outline"
-              onPress={() =>
-                navigation.navigate('BookingSupplies', {
-                  ...route.params,
-                  extras: allowedExtras(option, extraIds),
-                })
-              }
+              onPress={() => navigation.navigate('BookingSupplies', selection(supplies ?? []))}
               disabled={checking}
             />
           </>
@@ -339,12 +350,7 @@ export default function BookingSummaryScreen({ navigation, route }: Props) {
           <>
             <PillButton
               label={t('summary.addSupplies')}
-              onPress={() =>
-                navigation.navigate('BookingSupplies', {
-                  ...route.params,
-                  extras: allowedExtras(option, extraIds),
-                })
-              }
+              onPress={() => navigation.navigate('BookingSupplies', selection([]))}
               disabled={checking}
             />
             <PillButton

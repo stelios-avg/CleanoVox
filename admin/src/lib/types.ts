@@ -74,6 +74,8 @@ export type Database = {
           payment_intent_id: string | null;
           preferred_cleaner: string | null;
           admin_notes: string | null;
+          customer_notes: string | null;
+          customer_photos: string[];
           created_at: string;
           updated_at: string;
         };

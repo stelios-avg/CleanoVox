@@ -120,6 +120,10 @@ export type BookingSelection = {
   extras?: BookingExtraId[];
   /** Set on the summary step: `[]` means continue without supplies. */
   supplies?: BookingSupply[];
+  /** Optional instructions for the team (fragile items, access, etc). */
+  notes?: string;
+  /** Local photo URIs chosen on the summary; uploaded at payment. */
+  photos?: string[];
 };
 
 /** Mandatory customer details collected before payment. */

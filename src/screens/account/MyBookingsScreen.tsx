@@ -157,6 +157,14 @@ export default function MyBookingsScreen({ navigation }: Props) {
             </Text>
           </View>
         ) : null}
+        {item.customer_notes ? (
+          <View style={styles.metaRow}>
+            <Ionicons name="document-text-outline" size={15} color={colors.textSecondary} />
+            <Text style={styles.metaText} numberOfLines={3}>
+              {item.customer_notes}
+            </Text>
+          </View>
+        ) : null}
 
         <View style={styles.cardBottom}>
           <Text style={styles.amount}>{formatEuros(item.amount_cents)}</Text>
