@@ -68,7 +68,12 @@ export default function PaymentScreen({ navigation, route }: Props) {
   const stripeReady = STRIPE_PUBLISHABLE_KEY.startsWith('pk_');
 
   const saveAndConfirm = async (paymentIntentId?: string | null) => {
-    const photoPaths = await uploadBookingPhotos(route.params.photos ?? []);
+    let photoPaths: string[] = [];
+    try {
+      photoPaths = await uploadBookingPhotos(route.params.photos ?? []);
+    } catch {
+      // Photos are optional — never block a paid booking on upload.
+    }
     await createBooking({
       ...route.params,
       photoPaths,
