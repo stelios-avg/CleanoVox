@@ -33,7 +33,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'ShopCheckout'>;
  * so no card step here.
  */
 export default function CheckoutScreen({ navigation }: Props) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const { items, totalCents, clear } = useCart();
@@ -159,7 +159,7 @@ export default function CheckoutScreen({ navigation }: Props) {
                 <View key={i.product.id} style={styles.summaryRow}>
                   <Text style={styles.summaryQty}>{i.quantity}×</Text>
                   <Text style={styles.summaryName} numberOfLines={1}>
-                    {i.product.name_el}
+                    {language === 'el' ? i.product.name_el : i.product.name_en}
                     {i.product.variant_label ? ` (${i.product.variant_label})` : ''}
                   </Text>
                   <Text style={styles.summaryPrice}>

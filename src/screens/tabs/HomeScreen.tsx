@@ -110,7 +110,7 @@ export default function HomeScreen({ navigation }: Props) {
       {
         option: 'Deep Cleaning',
         titleKey: 'service.Deep Cleaning',
-        image: require('../../../assets/images/hero-welcome.png'),
+        image: require('../../../assets/images/service-deep.png'),
         rate: t('home.perHour', { price: euroPlain(DEEP_HOUR_RATE_CENTS) }),
       },
       {
@@ -184,13 +184,19 @@ export default function HomeScreen({ navigation }: Props) {
             style={styles.serviceCard}
             accessibilityLabel={`${t(service.titleKey)}, ${service.rate}`}
           >
-            <Text style={styles.serviceTitle} numberOfLines={2}>
-              {t(service.titleKey).replace(/\n/g, ' ')}
-            </Text>
-            <Text style={styles.serviceRate}>{service.rate}</Text>
-            <Image source={service.image} style={styles.serviceImage} resizeMode="cover" />
-            <View style={styles.serviceArrow}>
-              <Ionicons name="arrow-forward" size={16} color={colors.textOnDark} />
+            <View style={styles.serviceCopy}>
+              <Text style={styles.serviceTitle} numberOfLines={2}>
+                {t(service.titleKey).replace(/\n/g, ' ')}
+              </Text>
+              <Text style={styles.serviceRate} numberOfLines={1}>
+                {service.rate}
+              </Text>
+            </View>
+            <View style={styles.serviceImageWrap}>
+              <Image source={service.image} style={styles.serviceImage} resizeMode="cover" />
+              <View style={styles.serviceArrow}>
+                <Ionicons name="arrow-forward" size={16} color={colors.textOnDark} />
+              </View>
             </View>
           </PressableScale>
         ))}
@@ -372,33 +378,43 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: radii.card,
     padding: 14,
-    minHeight: 236,
+    height: 248,
     overflow: 'hidden',
     ...shadows.card,
+  },
+  serviceCopy: {
+    height: 64,
+    marginBottom: 10,
   },
   serviceTitle: {
     fontSize: 16,
     fontFamily: fonts.extraBold,
     color: colors.textPrimary,
     lineHeight: 21,
+    minHeight: 42,
   },
   serviceRate: {
     fontSize: 13,
     fontFamily: fonts.medium,
     color: colors.textSecondary,
     marginTop: 4,
-    marginBottom: 10,
+    lineHeight: 18,
   },
-  serviceImage: {
+  serviceImageWrap: {
     width: '100%',
     height: 122,
     borderRadius: 18,
+    overflow: 'hidden',
     backgroundColor: colors.surface,
+  },
+  serviceImage: {
+    width: '100%',
+    height: '100%',
   },
   serviceArrow: {
     position: 'absolute',
-    right: 14,
-    bottom: 14,
+    right: 8,
+    bottom: 8,
     width: 34,
     height: 34,
     borderRadius: 17,

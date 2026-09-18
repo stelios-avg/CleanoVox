@@ -39,7 +39,7 @@ function isCancellable(b: Booking): boolean {
 }
 
 export default function MyBookingsScreen({ navigation }: Props) {
-  const { t, locale } = useI18n();
+  const { t, locale, language } = useI18n();
   const insets = useSafeAreaInsets();
 
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -152,7 +152,7 @@ export default function MyBookingsScreen({ navigation }: Props) {
             <Text style={styles.metaText}>
               {t('bookings.supplies')} ·{' '}
               {item.supplies
-                .map((s) => `${s.quantity}× ${locale === 'el' ? s.name_el : s.name_en}`)
+                .map((s) => `${s.quantity}× ${language === 'el' ? s.name_el : s.name_en}`)
                 .join(', ')}
             </Text>
           </View>

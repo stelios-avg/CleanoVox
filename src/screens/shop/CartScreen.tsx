@@ -22,10 +22,10 @@ import type { RootStackParamList } from '../../navigation/types';
 type Props = NativeStackScreenProps<RootStackParamList, 'ShopCart'>;
 
 function CartRow({ item }: { item: CartItem }) {
-  const { locale } = useI18n();
+  const { language } = useI18n();
   const { add, setQuantity } = useCart();
   const { product, quantity } = item;
-  const name = locale === 'el' ? product.name_el : product.name_en;
+  const name = language === 'el' ? product.name_el : product.name_en;
   const atMax = quantity >= maxPurchasable(product);
 
   return (

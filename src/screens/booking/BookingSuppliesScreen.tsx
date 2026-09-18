@@ -35,8 +35,8 @@ function ProductRow({
   onAdd: () => void;
   onSet: (n: number) => void;
 }) {
-  const { locale } = useI18n();
-  const name = locale === 'el' ? product.name_el : product.name_en;
+  const { language } = useI18n();
+  const name = language === 'el' ? product.name_el : product.name_en;
 
   return (
     <View style={styles.row}>

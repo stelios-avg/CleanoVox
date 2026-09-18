@@ -25,10 +25,10 @@ import type { Product } from '../../types/database';
 type Props = NativeStackScreenProps<RootStackParamList, 'ShopCategory'>;
 
 function ProductRow({ product }: { product: Product }) {
-  const { locale, t } = useI18n();
+  const { language, t } = useI18n();
   const { quantityOf, add, setQuantity } = useCart();
   const qty = quantityOf(product.id);
-  const name = locale === 'el' ? product.name_el : product.name_en;
+  const name = language === 'el' ? product.name_el : product.name_en;
   const soldOut = isOutOfStock(product);
   const atMax = qty >= maxPurchasable(product);
 
